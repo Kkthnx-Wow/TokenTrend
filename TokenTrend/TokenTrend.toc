@@ -1,0 +1,31 @@
+## Interface: 120005, 120007
+## Title: TokenTrend
+## Notes: Financial-terminal price tracking for the WoW Token. Charts, moving averages, and buy/sell signals.
+## Author: Josh
+## Version: 1.0.0
+## SavedVariables: TokenTrendDB
+## IconTexture: Interface\ICONS\wow_token01
+## X-Category: Auction House & Vendors
+
+# Libraries
+Libs\LibGraph-2.0\LibStub.lua
+Libs\LibGraph-2.0\LibGraph-2.0\LibGraph-2.0.lua
+
+# Core
+Core\Namespace.lua
+Core\Locales\enUS.lua
+Core\Util.lua
+Core\Config.lua
+Core\Core.lua
+
+# Data + Analysis
+Modules\Data.lua
+Modules\Analysis.lua
+
+# UI
+UI\Main.lua
+UI\ChartHover.lua
+UI\Chart.lua
+UI\Stats.lua
+UI\History.lua
+UI\Minimap.lua
