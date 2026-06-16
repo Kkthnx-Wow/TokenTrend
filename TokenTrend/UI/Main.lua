@@ -448,10 +448,12 @@ function UI:SelectTab(index)
 end
 
 -- ---------------------------------------------------------------------------
--- Refresh: header + status + active tab. Cheap; only runs while shown.
+-- Refresh: header + status + active tab. Cheap, and a no-op while the window is
+-- hidden - a closed window has nothing to repaint, and Show() always refreshes
+-- on the way up, so a hidden /tt clock or DataUpdated costs nothing.
 -- ---------------------------------------------------------------------------
 function UI:Refresh()
-	if not self.frame then
+	if not self.frame or not self.frame:IsShown() then
 		return
 	end
 	local stats = ns.Analysis:Stats()
@@ -531,23 +533,28 @@ end
 -- Reactions
 -- ---------------------------------------------------------------------------
 ns:On("DataUpdated", function()
-	if UI.frame and UI.frame:IsShown() then
-		UI:Refresh()
-	end
+	UI:Refresh() -- self-guards while hidden
 end)
 
--- One setting changed. A palette swap is the only thing that needs a full
--- repaint (ApplyTheme replays every themed closure) + tab restyle; everything
--- else just needs the header + active tab redrawn, which re-pulls the new value.
--- One refresh, not the old ApplyTheme + SelectTab + Refresh (which redrew the
--- active tab twice).
+-- Per-key reactions to a live setting change. A palette swap is the only thing
+-- that needs a full repaint (ApplyTheme replays every themed closure) + tab
+-- restyle; everything else falls through to the shared header + active-tab
+-- redraw below, which re-pulls the new value. Add a key here when a setting
+-- needs extra work beyond a plain refresh - no if-chain to grow.
+local settingReactions = {
+	palette = function()
+		UI:ApplyTheme()
+		UI:StyleTabs()
+	end,
+}
+
 ns:On("SettingChanged", function(key)
 	if not UI.frame then
 		return
 	end
-	if key == "palette" then
-		UI:ApplyTheme()
-		UI:StyleTabs()
+	local react = settingReactions[key]
+	if react then
+		react()
 	end
 	UI:Refresh()
 end)

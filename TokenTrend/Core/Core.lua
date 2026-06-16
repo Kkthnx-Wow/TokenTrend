@@ -41,35 +41,44 @@ end
 SLASH_TOKENTREND1 = "/tokentrend"
 SLASH_TOKENTREND2 = "/tt"
 
-SlashCmdList["TOKENTREND"] = function(input)
-	local cmd = (input or ""):lower():match("^%s*(%S*)")
-
-	if cmd == "show" then
-		ns.UI:Show()
-	elseif cmd == "hide" then
-		ns.UI:Hide()
-	elseif cmd == "theme" then
-		ns:CyclePalette()
-	elseif cmd == "refresh" then
+-- Command dispatch table (cleaner than an if-elseif chain; add a verb here and
+-- it just works). Empty input falls through to "toggle"; unknown verbs print help.
+local commands = {
+	show = function() ns.UI:Show() end,
+	hide = function() ns.UI:Hide() end,
+	toggle = function() ns.UI:Toggle() end,
+	theme = function() ns:CyclePalette() end,
+	refresh = function()
 		ns.Data:RequestUpdate()
 		msg(L["Refresh"])
-	elseif cmd == "sync" then
+	end,
+	sync = function()
 		local on = not ns.db.sync
 		ns.Sync:SetEnabled(on)
 		msg(on and L["History sharing enabled."] or L["History sharing disabled."])
-	elseif cmd == "clock" then
+	end,
+	clock = function()
 		ns:SetSetting("clock24", not ns.db.clock24)
 		msg(L["Clock set to %s."]:format(ns.db.clock24 and L["24-hour"] or L["12-hour"]))
-	elseif cmd == "" or cmd == "toggle" then
-		ns.UI:Toggle()
-	else
-		msg(L["Commands:"])
-		print(" " .. L["/tt - toggle the window"])
-		print(" " .. L["/tt show - open the window"])
-		print(" " .. L["/tt hide - close the window"])
-		print(" " .. L["/tt theme - cycle color theme"])
-		print(" " .. L["/tt refresh - request a fresh price"])
-		print(" " .. L["/tt sync - toggle history sharing"])
-		print(" " .. L["/tt clock - toggle 12/24-hour time"])
+	end,
+}
+
+local function printHelp()
+	msg(L["Commands:"])
+	print(" " .. L["/tt - toggle the window"])
+	print(" " .. L["/tt show - open the window"])
+	print(" " .. L["/tt hide - close the window"])
+	print(" " .. L["/tt theme - cycle color theme"])
+	print(" " .. L["/tt refresh - request a fresh price"])
+	print(" " .. L["/tt sync - toggle history sharing"])
+	print(" " .. L["/tt clock - toggle 12/24-hour time"])
+end
+
+SlashCmdList["TOKENTREND"] = function(input)
+	local cmd = (input or ""):lower():match("^%s*(%S*)")
+	if cmd == "" then
+		cmd = "toggle"
 	end
+	local handler = commands[cmd] or printHelp
+	handler()
 end
