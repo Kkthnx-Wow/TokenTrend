@@ -1,4 +1,5 @@
 <div align="center">
+<img width="760" height="498" alt="image" src="https://github.com/user-attachments/assets/c2102f32-19ab-4f08-abbd-58b3df2f8f57" />
 
 # TokenTrend
 
