@@ -10,6 +10,9 @@ ns.defaults = {
 
 	palette = "terminal", -- "terminal" | "lunar"
 
+	-- Time display. true = 24-hour ("14:00"); false = 12-hour ("2:00 PM").
+	clock24 = true,
+
 	-- Polling + recording cadence. Token price updates server-side roughly
 	-- every ~20 min, so we *request* often but only *commit* a history point
 	-- once per sampleInterval to keep SavedVariables lean.
@@ -30,6 +33,10 @@ ns.defaults = {
 	-- Alerts.
 	alertOn30dLow = true,
 	lowAlertTolerance = 0.01, -- treat "within 1% of 30d low" as a buy signal
+
+	-- Peer sync: share price history with guild + group members to backfill the
+	-- gaps from when you were offline. On by default; /tt sync toggles it.
+	sync = true,
 
 	-- Window geometry. width/height are fixed design constants (the window has
 	-- no resize grip); only point/x/y are persisted as user state.

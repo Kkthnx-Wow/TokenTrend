@@ -21,9 +21,11 @@ Core\Core.lua
 # Data + Analysis
 Modules\Data.lua
 Modules\Analysis.lua
+Modules\Sync.lua
 
 # UI
 UI\Main.lua
+UI\SyncPanel.lua
 UI\ChartHover.lua
 UI\Chart.lua
 UI\Stats.lua

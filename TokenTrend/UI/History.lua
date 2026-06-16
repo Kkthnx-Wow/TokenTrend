@@ -89,7 +89,7 @@ local function fillRow(row, cd, prevClose, rowIndex)
 
 	local cells = row.cells
 	cells[1]:SetText(ns.db.historyGroup == "hour"
-		and date("%m/%d %H:00", cd.t) or date("%m/%d/%Y", cd.t))
+		and F.FormatShortDateHour(cd.t) or date("%m/%d/%Y", cd.t))
 	cells[1]:SetTextColor(p.muted[1], p.muted[2], p.muted[3])
 
 	local delta = cd.c - prevClose
@@ -191,16 +191,20 @@ local function build(panel)
 
 	hist.btnDay = UI:Button(controls, L["Daily"], 60, function() setGroup("day") end)
 	hist.btnDay:SetPoint("LEFT", 0, 0)
+	UI:SetTooltip(hist.btnDay, L["Daily"], L["Show one row per day (daily OHLC)."])
 	hist.btnHour = UI:Button(controls, L["Hourly"], 60, function() setGroup("hour") end)
 	hist.btnHour:SetPoint("LEFT", hist.btnDay, "RIGHT", 4, 0)
+	UI:SetTooltip(hist.btnHour, L["Hourly"], L["Show one row per hour (hourly OHLC)."])
 
 	hist.btnNext = UI:Button(controls, ">", 28, function() gotoPage(hist.page + 1) end)
 	hist.btnNext:SetPoint("RIGHT", 0, 0)
+	UI:SetTooltip(hist.btnNext, L["Next page"], L["Show older entries."])
 	hist.pageText = UI:Text(controls, "OVERLAY", C.Font, 11, "", "muted")
 	hist.pageText:SetPoint("RIGHT", hist.btnNext, "LEFT", -10, 0)
 	hist.pageText:SetJustifyH("RIGHT")
 	hist.btnPrev = UI:Button(controls, "<", 28, function() gotoPage(hist.page - 1) end)
 	hist.btnPrev:SetPoint("RIGHT", hist.pageText, "LEFT", -10, 0)
+	UI:SetTooltip(hist.btnPrev, L["Previous page"], L["Show newer entries."])
 
 	-- Header row ----------------------------------------------------------
 	local headerRow = CreateFrame("Frame", nil, panel)
@@ -250,4 +254,4 @@ local function build(panel)
 	return refresh
 end
 
-tinsert(UI.tabDefs, { id = "history", label = L["History"], build = build })
+tinsert(UI.tabDefs, { id = "history", label = L["History"], tip = L["Browse the full price history as a sortable table."], build = build })

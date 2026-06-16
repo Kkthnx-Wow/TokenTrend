@@ -19,6 +19,7 @@ local floor = math.floor
 local max = math.max
 local min = math.min
 local abs = math.abs
+local format = string.format
 local unpack = unpack -- hot: called per candle in the render loop
 
 -- Plot insets: room for the price gutter (left) and date axis (bottom).
@@ -344,22 +345,28 @@ local function build(panel)
 
 	chart.btnLine = UI:Button(controls, L["Line"], 60, set("chartMode", "line"))
 	chart.btnLine:SetPoint("LEFT", 0, 0)
+	UI:SetTooltip(chart.btnLine, L["Line"], L["Draw price as a line over time."])
 	chart.btnCandle = UI:Button(controls, L["Candles"], 66, set("chartMode", "candle"))
 	chart.btnCandle:SetPoint("LEFT", chart.btnLine, "RIGHT", 4, 0)
+	UI:SetTooltip(chart.btnCandle, L["Candles"], L["Draw open/high/low/close candlesticks."])
 
 	chart.btnMA7 = UI:Button(controls, L["MA7"], 48, function()
 		ns:SetSetting("showMA7", not ns.db.showMA7)
 	end)
 	chart.btnMA7:SetPoint("LEFT", chart.btnCandle, "RIGHT", 12, 0)
+	UI:SetTooltip(chart.btnMA7, L["MA7"], L["Toggle the 7-day moving average overlay."])
 	chart.btnMA30 = UI:Button(controls, L["MA30"], 54, function()
 		ns:SetSetting("showMA30", not ns.db.showMA30)
 	end)
 	chart.btnMA30:SetPoint("LEFT", chart.btnMA7, "RIGHT", 4, 0)
+	UI:SetTooltip(chart.btnMA30, L["MA30"], L["Toggle the 30-day moving average overlay."])
 
 	chart.btnHour = UI:Button(controls, L["Hourly"], 60, set("candleGroup", "hour"))
 	chart.btnHour:SetPoint("LEFT", chart.btnCandle, "RIGHT", 12, 0)
+	UI:SetTooltip(chart.btnHour, L["Hourly"], L["Group candles into one-hour buckets."])
 	chart.btnDay = UI:Button(controls, L["Daily"], 54, set("candleGroup", "day"))
 	chart.btnDay:SetPoint("LEFT", chart.btnHour, "RIGHT", 4, 0)
+	UI:SetTooltip(chart.btnDay, L["Daily"], L["Group candles into one-day buckets."])
 
 	-- Range buttons, right-aligned.
 	chart.rangeBtns = {}
@@ -375,6 +382,7 @@ local function build(panel)
 		end
 		prev = b
 		chart.rangeBtns[days] = b
+		UI:SetTooltip(b, lbl, days > 0 and format(L["Show the last %d days."], days) or L["Show the entire recorded history."])
 	end
 
 	-- Plot area --------------------------------------------------------------
@@ -482,4 +490,4 @@ local function build(panel)
 end
 
 -- Register the tab (Main builds it lazily).
-tinsert(UI.tabDefs, { id = "chart", label = L["Chart"], build = build })
+tinsert(UI.tabDefs, { id = "chart", label = L["Chart"], tip = L["Price over time with moving averages and candlesticks."], build = build })

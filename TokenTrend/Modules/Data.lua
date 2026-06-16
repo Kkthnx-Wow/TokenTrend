@@ -15,6 +15,10 @@ ns.Data = Data
 local C_WowTokenPublic = C_WowTokenPublic
 local C_Timer = C_Timer
 local time = time
+local floor = math.floor
+local tsort = table.sort
+
+local function byTime(a, b) return a.t < b.t end
 
 Data.current = nil -- latest gold price this session (display)
 Data.lastUpdate = nil -- when we last got a price
@@ -70,6 +74,45 @@ function Data:Record(gold)
 
 	-- History changed (refined tail or new row): invalidate analysis memos.
 	self.revision = self.revision + 1
+end
+
+-- Merge externally-sourced samples (peer sync) into history. Insert-only and
+-- bucketed by sampleInterval: a bucket we already hold always wins, so our own
+-- first-hand readings are never overwritten by a peer's. Sorts + prunes once at
+-- the end and bumps the revision a single time. Returns how many new points
+-- actually landed (0 = nothing new, no UI churn).
+function Data:Merge(points)
+	if not points or #points == 0 then return 0 end
+
+	local h = self:GetHistory()
+	local iv = ns.db.sampleInterval
+
+	-- Buckets we already cover (own data or previously merged).
+	local have = {}
+	for i = 1, #h do
+		have[floor(h[i].t / iv)] = true
+	end
+
+	local added = 0
+	for i = 1, #points do
+		local pt = points[i]
+		local b = floor(pt.t / iv)
+		if not have[b] then
+			have[b] = true
+			h[#h + 1] = { t = pt.t, p = pt.p }
+			added = added + 1
+		end
+	end
+
+	if added == 0 then return 0 end
+
+	-- Backfilled points are older than the live tail, so re-order before pruning.
+	tsort(h, byTime)
+	prune(h, ns.db.maxSamples)
+
+	self.revision = self.revision + 1
+	ns:Fire("DataUpdated")
+	return added
 end
 
 -- ---------------------------------------------------------------------------

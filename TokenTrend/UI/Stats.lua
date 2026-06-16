@@ -177,7 +177,7 @@ local function refresh()
 	local hours = ns.Analysis:VolatilityByHour()
 	local hourLabels = {}
 	for i = 0, 23 do
-		hourLabels[i + 1] = format("%02d:00", i)
+		hourLabels[i + 1] = F.FormatHour(i, "hm")
 	end
 	refreshStrip(stats.hourStrip, stats.hourCells, hours, hourLabels)
 
@@ -202,7 +202,7 @@ local function refresh()
 		end
 	end
 	if bestHour and bestDay then
-		stats.bestText:SetText(format("%s: %s %02d:00  \194\183  ~%s", L["Best time to buy"], L["DAY_" .. (bestDay + 1)], bestHour, F.FormatGold(F.Round(bestHourVal))))
+		stats.bestText:SetText(format("%s: %s %s  \194\183  ~%s", L["Best time to buy"], L["DAY_" .. (bestDay + 1)], F.FormatHour(bestHour, "hm"), F.FormatGold(F.Round(bestHourVal))))
 	else
 		stats.bestText:SetText("")
 	end
@@ -310,7 +310,7 @@ local function build(panel)
 	stats.hourTicks = {}
 	for _, hr in ipairs({ 0, 6, 12, 18 }) do
 		local t = UI:Text(right, "OVERLAY", C.Font, 9, "", "muted")
-		t:SetText(format("%02d", hr))
+		t:SetText(F.FormatHour(hr, "tick"))
 		t.__hr = hr
 		stats.hourTicks[#stats.hourTicks + 1] = t
 	end
@@ -374,6 +374,7 @@ local function build(panel)
 		local hw = hourStrip:GetWidth()
 		local hcw = hw / 24
 		for _, t in ipairs(stats.hourTicks) do
+			t:SetText(F.FormatHour(t.__hr, "tick")) -- re-render on a 12/24h toggle
 			t:ClearAllPoints()
 			t:SetPoint("TOP", hourStrip, "BOTTOMLEFT", (t.__hr + 0.5) * hcw, -2)
 		end
@@ -392,4 +393,4 @@ local function build(panel)
 	end
 end
 
-tinsert(UI.tabDefs, { id = "stats", label = L["Stats"], build = build })
+tinsert(UI.tabDefs, { id = "stats", label = L["Stats"], tip = L["Highs, lows, averages, and best times to buy."], build = build })

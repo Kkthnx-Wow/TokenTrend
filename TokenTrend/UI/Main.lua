@@ -103,6 +103,32 @@ function UI:Button(parent, text, width, onClick)
 	return b
 end
 
+-- Attach a hover tooltip to any frame. `title` shows bright; optional `body`
+-- wraps muted beneath it. We HookScript (not SetScript) so a button's existing
+-- highlight OnEnter/OnLeave keeps firing. Calling again just updates the text -
+-- handy for buttons whose meaning flips with state (clock, sync toggle).
+function UI:SetTooltip(frame, title, body, anchor)
+	frame.ttTitle, frame.ttBody, frame.ttAnchor = title, body, anchor or "ANCHOR_TOP"
+	if frame.__ttHooked then
+		return
+	end
+	frame.__ttHooked = true
+	frame:HookScript("OnEnter", function(self)
+		if not self.ttTitle then
+			return
+		end
+		GameTooltip:SetOwner(self, self.ttAnchor)
+		GameTooltip:AddLine(self.ttTitle)
+		if self.ttBody then
+			GameTooltip:AddLine(self.ttBody, 0.7, 0.7, 0.7, true)
+		end
+		GameTooltip:Show()
+	end)
+	frame:HookScript("OnLeave", function()
+		GameTooltip:Hide()
+	end)
+end
+
 -- A square, themed close button. Resting state matches the panel; hovering
 -- flushes it Bear-red so "this closes things" reads instantly. No more stock
 -- Blizzard X clashing with our charcoal.
@@ -303,6 +329,7 @@ function UI:Build()
 	close:SetScript("OnClick", function()
 		UI:Hide()
 	end)
+	self:SetTooltip(close, L["Close"], L["Close the window. Type /tt to reopen."], "ANCHOR_LEFT")
 
 	-- Tab strip -------------------------------------------------------------
 	local tabStrip = CreateFrame("Frame", nil, frame)
@@ -325,6 +352,9 @@ function UI:Build()
 		local btn = self:Button(tabStrip, def.label, 86, function()
 			UI:SelectTab(i)
 		end)
+		if def.tip then
+			self:SetTooltip(btn, def.label, def.tip)
+		end
 		if prevBtn then
 			btn:SetPoint("LEFT", prevBtn, "RIGHT", 6, 0)
 		else
@@ -357,6 +387,7 @@ function UI:Build()
 		ns:CyclePalette()
 	end)
 	themeBtn:SetPoint("RIGHT", 0, 0)
+	self:SetTooltip(themeBtn, L["Theme"], L["Cycle between the color themes."])
 	local refreshBtn = self:Button(footer, L["Refresh"], 72, function()
 		ns.Data:RequestUpdate()
 		C_Timer.After(1, function()
@@ -364,6 +395,21 @@ function UI:Build()
 		end)
 	end)
 	refreshBtn:SetPoint("RIGHT", themeBtn, "LEFT", -8, 0)
+	self:SetTooltip(refreshBtn, L["Refresh"], L["Request a fresh token price from the server."])
+
+	local syncBtn = self:Button(footer, L["Sync"], 72, function()
+		UI:ToggleSyncPanel()
+	end)
+	syncBtn:SetPoint("RIGHT", refreshBtn, "LEFT", -8, 0)
+	self:SetTooltip(syncBtn, L["Sync"], L["Open the peer sync panel - see what history you've shared and gained."])
+
+	-- Compact 12/24h clock toggle. Label shows the current mode; clicking flips
+	-- it. SettingChanged -> Refresh keeps the label in sync with /tt clock too.
+	local clockBtn = self:Button(footer, ns.db.clock24 and L["24h"] or L["12h"], 46, function()
+		ns:SetSetting("clock24", not ns.db.clock24)
+	end)
+	clockBtn:SetPoint("RIGHT", syncBtn, "LEFT", -8, 0)
+	self.clockBtn = clockBtn
 
 	self:ApplyTheme()
 	self:SelectTab(self.activeTab)
@@ -441,6 +487,13 @@ function UI:Refresh()
 	self.dayRange:Update(stats.dayLow, stats.dayHigh, stats.current)
 
 	self.statusText:SetText(("%s: %s   \194\183   %s: %d"):format(L["Last update"], F.AgoString(ns.Data.lastUpdate), L["Samples"], stats.samples))
+
+	if self.clockBtn then
+		self.clockBtn.label:SetText(ns.db.clock24 and L["24h"] or L["12h"])
+		self:SetTooltip(self.clockBtn, L["Clock"],
+			ns.db.clock24 and L["Showing 24-hour time. Click for 12-hour (AM/PM)."]
+				or L["Showing 12-hour time. Click for 24-hour."])
+	end
 
 	local def = self.tabDefs[self.activeTab]
 	if def and def.refresh then

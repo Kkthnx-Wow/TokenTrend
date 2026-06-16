@@ -118,7 +118,7 @@ local function onHoverUpdate(plot, chart)
 		local xc = (k + 0.5) * slot
 		showCross(chart, xc)
 		chart.marker:Hide()
-		local title = data.group == "hour" and date("%b %d  %H:00", cd.t) or date("%b %d", cd.t)
+		local title = data.group == "hour" and F.FormatDateHour(cd.t) or date("%b %d", cd.t)
 		local body = format("%s   %s\n%s   %s\n%s   %s\n%s   %s", L["Open"], F.FormatGold(cd.o), L["High"], F.FormatGold(cd.h), L["Low"], F.FormatGold(cd.l), L["Close"], F.FormatGold(cd.c))
 		showTip(chart, xc, height * 0.6, title, body)
 	elseif data.lo == data.hi then
@@ -130,7 +130,7 @@ local function onHoverUpdate(plot, chart)
 		local py = spanV > 0 and ((pt.p - data.vmin) / spanV) * height or height * 0.5
 		showCross(chart, rx)
 		showMarker(chart, rx, py)
-		showTip(chart, rx, py, date("%b %d  %H:%M", pt.t), F.FormatGold(pt.p))
+		showTip(chart, rx, py, F.FormatDateTime(pt.t), F.FormatGold(pt.p))
 	else
 		local h = data.h
 		local t = data.t0 + (rx / width) * data.xmax * 86400
@@ -149,7 +149,7 @@ local function onHoverUpdate(plot, chart)
 		local py = spanV > 0 and ((pt.p - data.vmin) / spanV) * height or height * 0.5
 		showCross(chart, px)
 		showMarker(chart, px, py)
-		showTip(chart, px, py, date("%b %d  %H:%M", pt.t), F.FormatGold(pt.p))
+		showTip(chart, px, py, F.FormatDateTime(pt.t), F.FormatGold(pt.p))
 	end
 end
 

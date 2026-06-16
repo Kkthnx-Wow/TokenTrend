@@ -53,6 +53,13 @@ SlashCmdList["TOKENTREND"] = function(input)
 	elseif cmd == "refresh" then
 		ns.Data:RequestUpdate()
 		msg(L["Refresh"])
+	elseif cmd == "sync" then
+		local on = not ns.db.sync
+		ns.Sync:SetEnabled(on)
+		msg(on and L["History sharing enabled."] or L["History sharing disabled."])
+	elseif cmd == "clock" then
+		ns:SetSetting("clock24", not ns.db.clock24)
+		msg(L["Clock set to %s."]:format(ns.db.clock24 and L["24-hour"] or L["12-hour"]))
 	elseif cmd == "" or cmd == "toggle" then
 		ns.UI:Toggle()
 	else
@@ -62,5 +69,7 @@ SlashCmdList["TOKENTREND"] = function(input)
 		print(" " .. L["/tt hide - close the window"])
 		print(" " .. L["/tt theme - cycle color theme"])
 		print(" " .. L["/tt refresh - request a fresh price"])
+		print(" " .. L["/tt sync - toggle history sharing"])
+		print(" " .. L["/tt clock - toggle 12/24-hour time"])
 	end
 end
