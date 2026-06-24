@@ -8,7 +8,7 @@ local addonName, ns = ...
 ns.defaults = {
 	schemaVersion = 1,
 
-	palette = "terminal", -- "terminal" | "lunar"
+	palette = "terminal", -- "terminal" | "lunar" | "class"
 
 	-- Time display. true = 24-hour ("14:00"); false = 12-hour ("2:00 PM").
 	clock24 = true,
@@ -30,9 +30,15 @@ ns.defaults = {
 	-- History (OHLC table) state.
 	historyGroup = "day", -- "hour" | "day" grouping for the table
 
-	-- Alerts.
+	-- Alerts (chart banners + chat/screen notifications; /tt alerts toggles).
 	alertOn30dLow = true,
+	alertOn30dHigh = true,
 	lowAlertTolerance = 0.01, -- treat "within 1% of 30d low" as a buy signal
+	highAlertTolerance = 0.01, -- treat "within 1% of 30d high" as a sell signal
+	alertSound = true,
+	alertChat = true,
+	lastBuyAlertDay = nil, -- floor(time/86400); throttle chat alerts to once per day
+	lastSellAlertDay = nil,
 
 	-- Peer sync: share price history with guild + group members to backfill the
 	-- gaps from when you were offline. On by default; /tt sync toggles it.

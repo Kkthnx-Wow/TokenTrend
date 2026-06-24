@@ -1,0 +1,5 @@
+<Bindings>
+	<Binding name="TOKENTREND_TOGGLE" header="TOKENTREND" category="ADDONS">
+		TokenTrend_Toggle();
+	</Binding>
+</Bindings>

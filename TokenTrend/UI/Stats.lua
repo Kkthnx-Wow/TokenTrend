@@ -10,7 +10,7 @@ local UI = ns.UI
 
 local format = string.format
 
-local stats = {}
+local stats = { layoutPending = false }
 
 -- Blend cheapest(green) -> priciest(red) by a 0..1 fraction.
 local function heatColor(frac)
@@ -35,7 +35,7 @@ end
 -- Refresh
 -- ---------------------------------------------------------------------------
 local function setVal(row, text, r, g, b)
-	row.value:SetText(text or "\226\128\148")
+	row.value:SetText(text or F.EmDash)
 	if r then
 		row.value:SetTextColor(r, g, b)
 	else
@@ -69,7 +69,7 @@ local function updateFairValue(s)
 		word, cr, cg, cb = L["Fair value"], C.Neutral[1], C.Neutral[2], C.Neutral[3]
 	end
 	local pctAbove = (lo ~= 0) and ((cur - lo) / lo * 100) or 0
-	stats.fairVerdict:SetText(format("%s  \194\183  %d%% %s", word, F.Round(pctAbove), L["above 30-day low"]))
+	stats.fairVerdict:SetText(format("%s  %s  %d%% %s", word, F.Sep, F.Round(pctAbove), L["above 30-day low"]))
 	stats.fairVerdict:SetTextColor(cr, cg, cb)
 end
 
@@ -121,18 +121,31 @@ end
 local function refresh()
 	local s = ns.Analysis:Stats()
 
-	setVal(stats.rows.current, F.FormatGold(s.current))
 	if s.current then
 		local r, g, b = F.TrendColor(s.changeAbs)
 		setVal(stats.rows.current, F.FormatGold(s.current), r, g, b)
 	end
 
-	if s.changeAbs and s.changeAbs ~= 0 then
-		local r, g, b = F.TrendColor(s.changeAbs)
-		setVal(stats.rows.change, format("%s%s (%s)", s.changeAbs > 0 and "+" or "", F.FormatGold(math.abs(s.changeAbs)), F.FormatPct(s.changePct)), r, g, b)
+	-- Day-over-day change (matches the header ticker).
+	local cAbs = s.netAbs or s.changeAbs
+	local cPct = s.netPct or s.changePct
+	if cAbs and cAbs ~= 0 then
+		local r, g, b = F.TrendColor(cAbs)
+		setVal(stats.rows.change, format("%s%s (%s)", cAbs > 0 and "+" or "", F.FormatGold(math.abs(cAbs)), F.FormatPct(cPct)), r, g, b)
 	else
 		setVal(stats.rows.change, L["No change"], C.Neutral[1], C.Neutral[2], C.Neutral[3])
 	end
+
+	local trend, _ = ns.Analysis:Trend()
+	local trendWord, tr, tg, tb
+	if trend == "rising" then
+		trendWord, tr, tg, tb = L["Rising"], C.Bull[1], C.Bull[2], C.Bull[3]
+	elseif trend == "falling" then
+		trendWord, tr, tg, tb = L["Falling"], C.Bear[1], C.Bear[2], C.Bear[3]
+	else
+		trendWord, tr, tg, tb = L["Flat"], C.Neutral[1], C.Neutral[2], C.Neutral[3]
+	end
+	setVal(stats.rows.trend, trendWord, tr, tg, tb)
 
 	-- Key Data: previous (calendar-day) close + today's low-high range.
 	setVal(stats.rows.prevClose, F.FormatGold(s.prevClose))
@@ -148,7 +161,7 @@ local function refresh()
 	setVal(stats.rows.lowAll, F.FormatGold(s.lowAll), C.Bull[1], C.Bull[2], C.Bull[3])
 	setVal(stats.rows.highAll, F.FormatGold(s.highAll), C.Bear[1], C.Bear[2], C.Bear[3])
 	setVal(stats.rows.samples, tostring(s.samples))
-	setVal(stats.rows.since, s.since and F.DateString(s.since) or "\226\128\148")
+	setVal(stats.rows.since, s.since and F.DateString(s.since) or F.EmDash)
 
 	updateFairValue(s)
 
@@ -170,7 +183,13 @@ local function refresh()
 	stats.bestText:Show()
 
 	if stats.hourStrip:GetWidth() <= 0 then
-		C_Timer.After(0, refresh)
+		if not stats.layoutPending then
+			stats.layoutPending = true
+			C_Timer.After(0, function()
+				stats.layoutPending = false
+				refresh()
+			end)
+		end
 		return
 	end
 
@@ -202,7 +221,7 @@ local function refresh()
 		end
 	end
 	if bestHour and bestDay then
-		stats.bestText:SetText(format("%s: %s %s  \194\183  ~%s", L["Best time to buy"], L["DAY_" .. (bestDay + 1)], F.FormatHour(bestHour, "hm"), F.FormatGold(F.Round(bestHourVal))))
+		stats.bestText:SetText(format("%s: %s %s  %s  ~%s", L["Best time to buy"], L["DAY_" .. (bestDay + 1)], F.FormatHour(bestHour, "hm"), F.Sep, F.FormatGold(F.Round(bestHourVal))))
 	else
 		stats.bestText:SetText("")
 	end
@@ -252,8 +271,10 @@ local function build(panel)
 	stats.rows = {}
 	local r = makeRow(left, heading, L["Current Price"])
 	stats.rows.current = r
-	r = makeRow(left, r.anchor, L["Change"])
+	r = makeRow(left, r.anchor, L["Day Change"])
 	stats.rows.change = r
+	r = makeRow(left, r.anchor, L["Trend"])
+	stats.rows.trend = r
 	r = makeRow(left, r.anchor, L["Previous Close"])
 	stats.rows.prevClose = r
 	r = makeRow(left, r.anchor, L["Day Range"])

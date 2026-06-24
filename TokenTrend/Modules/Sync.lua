@@ -379,4 +379,10 @@ ns:OnLogin(function()
 	C_Timer.NewTicker(REBROADCAST, function()
 		Sync:Broadcast()
 	end)
+
+	ns:On("DataUpdated", function()
+		if ns.db.sync then
+			scheduleBroadcast()
+		end
+	end)
 end)

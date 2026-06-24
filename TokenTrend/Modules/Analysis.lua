@@ -36,17 +36,34 @@ end
 local function memoize(fn)
 	local cache = {}
 	local cachedRev = -1
+	local NIL = {} -- Lua tables cannot use nil as an index (Stats(), Volatility*(), etc.)
+	local function key(v)
+		return v == nil and NIL or v
+	end
 	return function(self, a, b)
 		local rev = ns.Data.revision or 0
 		if rev ~= cachedRev then
 			wipe(cache)
 			cachedRev = rev
 		end
-		local key = tostring(a) .. "\0" .. tostring(b)
-		local v = cache[key]
+		if b ~= nil then
+			local slot = cache[key(a)]
+			if not slot then
+				slot = {}
+				cache[key(a)] = slot
+			end
+			local v = slot[key(b)]
+			if v == nil then
+				v = fn(self, a, b)
+				slot[key(b)] = v
+			end
+			return v
+		end
+		local ka = key(a)
+		local v = cache[ka]
 		if v == nil then
 			v = fn(self, a, b)
-			cache[key] = v
+			cache[ka] = v
 		end
 		return v
 	end
@@ -79,7 +96,7 @@ end
 -- ---------------------------------------------------------------------------
 -- Low / high / average over a trailing window (in days)
 -- ---------------------------------------------------------------------------
-function Analysis:Extremes(days)
+local function extremesRaw(self, days)
 	local h, lo, hi = self:Slice(days)
 	if hi < lo then return nil, nil, nil, 0 end
 	local minP, maxP, sum, n = huge, -huge, 0, 0
@@ -92,6 +109,16 @@ function Analysis:Extremes(days)
 	end
 	if n == 0 then return nil, nil, nil, 0 end
 	return minP, maxP, floor(sum / n + 0.5), n
+end
+
+local extremesMemo = memoize(function(self, days)
+	local minP, maxP, avg, n = extremesRaw(self, days)
+	return { minP, maxP, avg, n }
+end)
+
+function Analysis:Extremes(days)
+	local packed = extremesMemo(self, days)
+	return packed[1], packed[2], packed[3], packed[4]
 end
 
 -- ---------------------------------------------------------------------------
@@ -197,6 +224,31 @@ function Analysis:Is30DayLow()
 	return cur <= low30 * (1 + tol), low30
 end
 
+-- Sell signal: at (or within tolerance of) the 30-day high?
+function Analysis:Is30DayHigh()
+	local cur = ns.Data.current
+	if not cur then return false, nil end
+	local _, high30 = self:Extremes(30)
+	if not high30 then return false, nil end
+	local tol = ns.db.highAlertTolerance or 0
+	return cur >= high30 * (1 - tol), high30
+end
+
+-- NASDAQ-style trend: current price vs the 7-day average.
+function Analysis:Trend()
+	local cur = ns.Data.current
+	if not cur then return "flat", nil end
+	local _, _, avg7 = self:Extremes(7)
+	if not avg7 or avg7 == 0 then return "flat", nil end
+	local pct = (cur - avg7) / avg7
+	if pct > 0.005 then
+		return "rising", pct
+	elseif pct < -0.005 then
+		return "falling", pct
+	end
+	return "flat", pct
+end
+
 -- ---------------------------------------------------------------------------
 -- "Key Data" for today: today's OHLC and the prior day's close, so the UI can
 -- show a Previous Close and a Day Range like a real ticker. Built from daily
@@ -290,6 +342,7 @@ function Analysis:VolatilityByHour()
 		return tonumber(date("%H", t)) -- 0..23, local hour
 	end, 24)
 end
+Analysis.VolatilityByHour = memoize(Analysis.VolatilityByHour)
 
 function Analysis:VolatilityByWeekday()
 	-- date('*t').wday is 1=Sunday..7=Saturday; shift to 0-based bucket.
@@ -297,3 +350,4 @@ function Analysis:VolatilityByWeekday()
 		return date("*t", t).wday - 1
 	end, 7)
 end
+Analysis.VolatilityByWeekday = memoize(Analysis.VolatilityByWeekday)

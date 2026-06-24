@@ -32,20 +32,7 @@ local MA30_COLOR = { 0.58, 0.64, 0.72, 1 } -- slate
 -- ---------------------------------------------------------------------------
 -- Local chart state (built once)
 -- ---------------------------------------------------------------------------
-local chart = {}
-
-local function styleToggle(btn, active)
-	local p = ns:Palette()
-	if active then
-		btn.label:SetTextColor(p.accent[1], p.accent[2], p.accent[3])
-		btn:SetBackdropBorderColor(p.accent[1], p.accent[2], p.accent[3], 1)
-		btn:SetBackdropColor(p.accent[1], p.accent[2], p.accent[3], 0.18)
-	else
-		btn.label:SetTextColor(p.text[1], p.text[2], p.text[3])
-		btn:SetBackdropBorderColor(p.border[1], p.border[2], p.border[3], 1)
-		btn:SetBackdropColor(p.panel[1], p.panel[2], p.panel[3], 1)
-	end
-end
+local chart = { layoutPending = false }
 
 -- ---------------------------------------------------------------------------
 -- Coordinate mapping inside the plot rect
@@ -262,14 +249,14 @@ end
 -- ---------------------------------------------------------------------------
 local function refresh()
 	-- Sync toggle button styling with current settings.
-	styleToggle(chart.btnLine, ns.db.chartMode == "line")
-	styleToggle(chart.btnCandle, ns.db.chartMode == "candle")
-	styleToggle(chart.btnMA7, ns.db.showMA7)
-	styleToggle(chart.btnMA30, ns.db.showMA30)
-	styleToggle(chart.btnHour, ns.db.candleGroup == "hour")
-	styleToggle(chart.btnDay, ns.db.candleGroup == "day")
+	UI:StyleButtonToggle(chart.btnLine, ns.db.chartMode == "line")
+	UI:StyleButtonToggle(chart.btnCandle, ns.db.chartMode == "candle")
+	UI:StyleButtonToggle(chart.btnMA7, ns.db.showMA7)
+	UI:StyleButtonToggle(chart.btnMA30, ns.db.showMA30)
+	UI:StyleButtonToggle(chart.btnHour, ns.db.candleGroup == "hour")
+	UI:StyleButtonToggle(chart.btnDay, ns.db.candleGroup == "day")
 	for days, btn in pairs(chart.rangeBtns) do
-		styleToggle(btn, ns.db.rangeDays == days)
+		UI:StyleButtonToggle(btn, ns.db.rangeDays == days)
 	end
 	-- MA toggles only make sense in line mode; group toggles only in candle.
 	chart.btnMA7:SetShown(ns.db.chartMode == "line")
@@ -287,7 +274,21 @@ local function refresh()
 	if ns.db.alertOn30dLow then
 		low = ns.Analysis:Is30DayLow()
 	end
-	chart.banner:SetShown(low and hasData)
+	chart.buyBanner:SetShown(low and hasData)
+
+	local high = false
+	if ns.db.alertOn30dHigh then
+		high = ns.Analysis:Is30DayHigh()
+	end
+	-- Buy takes priority if both somehow qualify (tolerance overlap on a flat range).
+	chart.sellBanner:SetShown(high and hasData and not low)
+
+	-- MA legend only in line mode when at least one MA is on.
+	local showLegend = ns.db.chartMode == "line" and (ns.db.showMA7 or ns.db.showMA30)
+	chart.legend:SetShown(showLegend and hasData)
+	if chart.refreshLegend then
+		chart.refreshLegend()
+	end
 
 	if not hasData then
 		-- Distinguish "no price ever" from "nothing in this time range".
@@ -312,7 +313,13 @@ local function refresh()
 
 	-- Plot rect may not be laid out yet on the very first open; defer a frame.
 	if chart.plot:GetWidth() <= 0 then
-		C_Timer.After(0, refresh)
+		if not chart.layoutPending then
+			chart.layoutPending = true
+			C_Timer.After(0, function()
+				chart.layoutPending = false
+				refresh()
+			end)
+		end
 		return
 	end
 
@@ -458,30 +465,103 @@ local function build(panel)
 	chart.hint:SetText(L["Collecting price history - the chart fills in as new prices are recorded."])
 	chart.hint:Hide()
 
-	-- Buy-signal banner across the top of the plot.
-	local banner = CreateFrame("Frame", nil, plotArea, "BackdropTemplate")
-	banner:SetBackdrop(UI.BACKDROP)
-	banner:SetPoint("TOP", plot, "TOP", 0, -4)
-	banner:SetSize(220, 22)
-	banner:SetFrameLevel(plotArea:GetFrameLevel() + 10)
-	banner:Hide()
-	local bannerArrow = banner:CreateTexture(nil, "OVERLAY")
-	bannerArrow:SetSize(24, 24)
-	bannerArrow:SetPoint("LEFT", 8, 1)
-	F.SetArrow(bannerArrow, true)
-	bannerArrow:SetVertexColor(1, 1, 1)
-	local bannerText = banner:CreateFontString(nil, "OVERLAY")
-	bannerText:SetFont(C.Font, 12, "")
-	bannerText:SetShadowOffset(1, -1)
-	bannerText:SetPoint("LEFT", bannerArrow, "RIGHT", 4, -1)
-	bannerText:SetText(L["BUY SIGNAL"] .. "  \194\183  " .. L["At or near a 30-day low. Good time to buy."])
-	bannerText:SetTextColor(1, 1, 1)
-	banner:SetWidth(bannerText:GetStringWidth() + 40)
+	-- Buy-signal banner (NASDAQ-style callout at a 30-day low).
+	local buyBanner = CreateFrame("Frame", nil, plotArea, "BackdropTemplate")
+	buyBanner:SetBackdrop(UI.BACKDROP)
+	buyBanner:SetPoint("TOP", plot, "TOP", 0, -4)
+	buyBanner:SetSize(220, 22)
+	buyBanner:SetFrameLevel(plotArea:GetFrameLevel() + 10)
+	buyBanner:Hide()
+	local buyArrow = buyBanner:CreateTexture(nil, "OVERLAY")
+	buyArrow:SetSize(24, 24)
+	buyArrow:SetPoint("LEFT", 8, 1)
+	F.SetArrow(buyArrow, true)
+	buyArrow:SetVertexColor(1, 1, 1)
+	local buyText = buyBanner:CreateFontString(nil, "OVERLAY")
+	buyText:SetFont(C.Font, 12, "")
+	buyText:SetShadowOffset(1, -1)
+	buyText:SetPoint("LEFT", buyArrow, "RIGHT", 4, -1)
+	buyText:SetText(L["BUY SIGNAL"] .. "  " .. F.Sep .. "  " .. L["At or near a 30-day low. Good time to buy."])
+	buyText:SetTextColor(1, 1, 1)
+	buyBanner:SetWidth(buyText:GetStringWidth() + 40)
 	UI:OnTheme(function()
-		banner:SetBackdropColor(C.Bull[1], C.Bull[2], C.Bull[3], 0.9)
-		banner:SetBackdropBorderColor(C.Bull[1], C.Bull[2], C.Bull[3], 1)
+		buyBanner:SetBackdropColor(C.Bull[1], C.Bull[2], C.Bull[3], 0.9)
+		buyBanner:SetBackdropBorderColor(C.Bull[1], C.Bull[2], C.Bull[3], 1)
 	end)
-	chart.banner = banner
+	chart.buyBanner = buyBanner
+
+	-- Sell-signal banner (symmetric: near a 30-day high).
+	local sellBanner = CreateFrame("Frame", nil, plotArea, "BackdropTemplate")
+	sellBanner:SetBackdrop(UI.BACKDROP)
+	sellBanner:SetPoint("TOP", plot, "TOP", 0, -4)
+	sellBanner:SetSize(220, 22)
+	sellBanner:SetFrameLevel(plotArea:GetFrameLevel() + 10)
+	sellBanner:Hide()
+	local sellArrow = sellBanner:CreateTexture(nil, "OVERLAY")
+	sellArrow:SetSize(24, 24)
+	sellArrow:SetPoint("LEFT", 8, 1)
+	F.SetArrow(sellArrow, false)
+	sellArrow:SetVertexColor(1, 1, 1)
+	local sellText = sellBanner:CreateFontString(nil, "OVERLAY")
+	sellText:SetFont(C.Font, 12, "")
+	sellText:SetShadowOffset(1, -1)
+	sellText:SetPoint("LEFT", sellArrow, "RIGHT", 4, -1)
+	sellText:SetText(L["SELL SIGNAL"] .. "  " .. F.Sep .. "  " .. L["At or near a 30-day high. Good time to sell."])
+	sellText:SetTextColor(1, 1, 1)
+	sellBanner:SetWidth(sellText:GetStringWidth() + 40)
+	UI:OnTheme(function()
+		sellBanner:SetBackdropColor(C.Bear[1], C.Bear[2], C.Bear[3], 0.9)
+		sellBanner:SetBackdropBorderColor(C.Bear[1], C.Bear[2], C.Bear[3], 1)
+	end)
+	chart.sellBanner = sellBanner
+
+	-- Line-chart legend (price + moving averages).
+	local legend = CreateFrame("Frame", nil, plotArea)
+	legend:SetPoint("BOTTOMLEFT", plot, "BOTTOMLEFT", 0, 2)
+	legend:SetHeight(14)
+	legend:Hide()
+	chart.legend = legend
+	local legendItems = {
+		{ label = L["Price"], color = function() return ns:Palette().accent end, always = true },
+		{ label = L["MA7"], color = function() return MA7_COLOR end, key = "showMA7" },
+		{ label = L["MA30"], color = function() return MA30_COLOR end, key = "showMA30" },
+	}
+	local prevDot
+	for i, item in ipairs(legendItems) do
+		local row = CreateFrame("Frame", nil, legend)
+		row:SetHeight(14)
+		if prevDot then
+			row:SetPoint("LEFT", prevDot, "RIGHT", 10, 0)
+		else
+			row:SetPoint("LEFT", 0, 0)
+		end
+		local dot = row:CreateTexture(nil, "ARTWORK")
+		dot:SetSize(8, 8)
+		dot:SetPoint("LEFT", 0, 0)
+		row.dot = dot
+		row.key = item.key
+		local lbl = row:CreateFontString(nil, "OVERLAY")
+		lbl:SetFont(C.Font, 10, "")
+		lbl:SetPoint("LEFT", dot, "RIGHT", 4, 0)
+		lbl:SetText(item.label)
+		row.label = lbl
+		UI:OnTheme(function(p)
+			local c = item.color()
+			dot:SetColorTexture(c[1], c[2], c[3], 1)
+			lbl:SetTextColor(p.muted[1], p.muted[2], p.muted[3])
+		end)
+		prevDot = row
+		chart["legendRow" .. i] = row
+	end
+	chart.refreshLegend = function()
+		for i, item in ipairs(legendItems) do
+			local row = chart["legendRow" .. i]
+			if row then
+				local show = item.always or (item.key and ns.db[item.key])
+				row:SetShown(show)
+			end
+		end
+	end
 
 	-- Hover layer ------------------------------------------------------------
 	Hover.Install(chart, plot, plotArea)

@@ -58,6 +58,7 @@ function UI:BuildSyncPanel()
 	panel:EnableMouse(true) -- swallow clicks so they don't fall through to the chart
 	panel:Hide()
 	self:Skin(panel, "panel")
+	ns.Skin.CreateShadow(panel, 4)
 	self.syncPanel = panel
 
 	local title = self:Text(panel, "OVERLAY", C.Font, 14, "", "accent")
@@ -83,8 +84,12 @@ function UI:BuildSyncPanel()
 	panel.gained = self:Text(panel, "OVERLAY", C.Font, 12, "", "muted")
 	panel.gained:SetPoint("TOPLEFT", panel.status, "BOTTOMLEFT", 0, -10)
 
+	panel.instanceNote = self:Text(panel, "OVERLAY", C.Font, 11, "", "muted")
+	panel.instanceNote:SetPoint("TOPLEFT", panel.gained, "BOTTOMLEFT", 0, -6)
+	panel.instanceNote:Hide()
+
 	local fromHeader = self:Text(panel, "OVERLAY", C.Font, 11, "", "accent")
-	fromHeader:SetPoint("TOPLEFT", panel.gained, "BOTTOMLEFT", 0, -14)
+	fromHeader:SetPoint("TOPLEFT", panel.instanceNote, "BOTTOMLEFT", 0, -8)
 	fromHeader:SetText(L["Backfilled from"])
 	panel.fromBody = self:Text(panel, "OVERLAY", C.Font, 12, "", "text")
 	panel.fromBody:SetPoint("TOPLEFT", fromHeader, "BOTTOMLEFT", 4, -5)
@@ -122,6 +127,13 @@ function UI:RefreshSyncPanel()
 		self:SetTooltip(panel.toggle, L["Enable"], L["Share price history with guild and group members to fill gaps."], "ANCHOR_LEFT")
 	end
 
+	if ns.db.sync and IsInInstance() then
+		panel.instanceNote:SetText("|cff" .. F.Hex(C.Neutral) .. L["Paused while in an instance."] .. "|r")
+		panel.instanceNote:Show()
+	else
+		panel.instanceNote:Hide()
+	end
+
 	panel.gained:SetText(format(L["Gained this session: %s"], F.Comma(s.gained) .. " " .. L["samples"]))
 	panel.fromBody:SetText(listText(s.from))
 	panel.toBody:SetText(listText(s.to))
@@ -143,6 +155,12 @@ end
 
 -- Keep the panel live while it's open and a merge lands.
 ns:On("DataUpdated", function()
+	if UI.syncPanel and UI.syncPanel:IsShown() then
+		UI:RefreshSyncPanel()
+	end
+end)
+
+ns:RegisterEvent("PLAYER_ENTERING_WORLD", function()
 	if UI.syncPanel and UI.syncPanel:IsShown() then
 		UI:RefreshSyncPanel()
 	end

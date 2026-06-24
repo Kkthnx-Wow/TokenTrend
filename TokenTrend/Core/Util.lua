@@ -13,6 +13,7 @@ local abs = math.abs
 local format = string.format
 local time = time
 local date = date
+local tremove = table.remove
 local issecretvalue = issecretvalue
 local BreakUpLargeNumbers = BreakUpLargeNumbers
 local GetCurrentRegion = GetCurrentRegion
@@ -28,9 +29,9 @@ function F.IsSecret(v)
 	return issecretvalue and issecretvalue(v) or false
 end
 
-function F.NotSecret(v)
-	return not (issecretvalue and issecretvalue(v))
-end
+-- Display constants (UTF-8).
+F.EmDash = "\226\128\148"
+F.Sep = "\194\183"
 
 -- ---------------------------------------------------------------------------
 -- Math
@@ -75,7 +76,7 @@ end
 -- prints "nilg" at people.
 function F.FormatGold(gold)
 	if not gold then
-		return "\226\128\148"
+		return F.EmDash
 	end -- em dash
 	return commaNumber(gold) .. "g"
 end
@@ -83,7 +84,7 @@ end
 -- Compact gold for tight axis labels: 1.23M / 845K / 999.
 function F.FormatGoldShort(gold)
 	if not gold then
-		return "\226\128\148"
+		return F.EmDash
 	end
 	if gold >= 1000000 then
 		return format("%.2fMg", gold / 1000000)

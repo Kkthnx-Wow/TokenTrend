@@ -15,37 +15,24 @@ local date = date
 local ceil = math.ceil
 local max = math.max
 local min = math.min
+local tsort = table.sort
 
 local ROWS = 12 -- visible rows per page
 
 -- Column model. Date is left-aligned; the numeric columns are right-aligned and
--- evenly split the remaining width (see positionCells).
+-- evenly split the remaining width (see positionCells). Click a header to sort.
 local COLUMNS = {
-	{ key = "date", label = L["Date"], justify = "LEFT" },
-	{ key = "close", label = L["Close"], justify = "RIGHT" },
-	{ key = "open", label = L["Open"], justify = "RIGHT" },
-	{ key = "high", label = L["High"], justify = "RIGHT" },
-	{ key = "low", label = L["Low"], justify = "RIGHT" },
-	{ key = "chg", label = L["Chg %"], justify = "RIGHT" },
+	{ key = "date", label = L["Date"], justify = "LEFT", sortable = true },
+	{ key = "close", label = L["Close"], justify = "RIGHT", sortable = true },
+	{ key = "open", label = L["Open"], justify = "RIGHT", sortable = false },
+	{ key = "high", label = L["High"], justify = "RIGHT", sortable = false },
+	{ key = "low", label = L["Low"], justify = "RIGHT", sortable = false },
+	{ key = "chg", label = L["Chg %"], justify = "RIGHT", sortable = true },
 }
 
-local hist = { page = 1, laidOutWidth = nil }
-
--- ---------------------------------------------------------------------------
--- Toggle + pager styling (mirrors the chart's toggle look)
--- ---------------------------------------------------------------------------
-local function styleToggle(btn, active)
-	local p = ns:Palette()
-	if active then
-		btn.label:SetTextColor(p.accent[1], p.accent[2], p.accent[3])
-		btn:SetBackdropBorderColor(p.accent[1], p.accent[2], p.accent[3], 1)
-		btn:SetBackdropColor(p.accent[1], p.accent[2], p.accent[3], 0.18)
-	else
-		btn.label:SetTextColor(p.text[1], p.text[2], p.text[3])
-		btn:SetBackdropBorderColor(p.border[1], p.border[2], p.border[3], 1)
-		btn:SetBackdropColor(p.panel[1], p.panel[2], p.panel[3], 1)
-	end
-end
+local hist = { page = 1, laidOutWidth = nil, sortCol = "date", sortAsc = false, layoutPending = false }
+local orderCache = { rev = -1, group = nil, sortCol = nil, sortAsc = nil, order = nil }
+local refresh -- forward-declared; clickSort runs before the function body below is assigned
 
 local function setPagerEnabled(btn, on)
 	btn:SetEnabled(on)
@@ -55,35 +42,151 @@ end
 -- ---------------------------------------------------------------------------
 -- Column layout: place a row's (or the header's) cells across width W.
 -- ---------------------------------------------------------------------------
-local function positionCells(cells, W)
+local function columnMetrics(W)
 	local pad = 6
 	local dateRight = W * 0.26
 	local numW = (W - pad - dateRight) / (#COLUMNS - 1)
+	return pad, dateRight, numW
+end
+
+local function positionCells(cells, W)
+	local pad, dateRight, numW = columnMetrics(W)
 	for i, fs in ipairs(cells) do
 		fs:ClearAllPoints()
 		fs:SetJustifyH(COLUMNS[i].justify)
 		if i == 1 then
 			fs:SetPoint("LEFT", fs:GetParent(), "LEFT", pad, 0)
 		else
-			-- Right edge of column i sits at dateRight + numW*(i-1) from the left.
 			fs:SetPoint("RIGHT", fs:GetParent(), "LEFT", dateRight + numW * (i - 1), 0)
 		end
 	end
 end
 
+local function positionHeaders(W)
+	local pad, dateRight, numW = columnMetrics(W)
+	for i, hdr in ipairs(hist.headerBtns) do
+		hdr:ClearAllPoints()
+		hdr:SetHeight(22)
+		if i == 1 then
+			hdr:SetPoint("TOPLEFT", hdr:GetParent(), "TOPLEFT", pad, 0)
+			hdr:SetWidth(dateRight - pad)
+		else
+			hdr:SetPoint("TOPLEFT", hdr:GetParent(), "TOPLEFT", dateRight + numW * (i - 2), 0)
+			hdr:SetWidth(numW)
+		end
+		hdr.label:SetJustifyH(COLUMNS[i].justify)
+		hdr.label:ClearAllPoints()
+		if COLUMNS[i].justify == "RIGHT" then
+			hdr.label:SetPoint("RIGHT", hdr, "RIGHT", -2, 0)
+		elseif COLUMNS[i].justify == "LEFT" then
+			hdr.label:SetPoint("LEFT", hdr, "LEFT", 0, 0)
+		else
+			hdr.label:SetPoint("CENTER")
+		end
+	end
+end
+
 local function layoutColumns(W)
-	positionCells(hist.headerCells, W)
+	if hist.headerBtns then
+		positionHeaders(W)
+	end
 	for r = 1, ROWS do
 		positionCells(hist.rows[r].cells, W)
 	end
+end
+
+-- Build a display order (indices into the candles array) for the active sort.
+local function sortedOrder(candles)
+	local rev = ns.Data.revision or 0
+	local group = ns.db.historyGroup
+	if orderCache.rev == rev and orderCache.group == group
+		and orderCache.sortCol == hist.sortCol and orderCache.sortAsc == hist.sortAsc then
+		return orderCache.order
+	end
+
+	local order = {}
+	local n = #candles
+	for i = 1, n do
+		order[i] = i
+	end
+	local col, asc = hist.sortCol, hist.sortAsc
+	local chgCache = {}
+
+	local function chgPct(j)
+		local cached = chgCache[j]
+		if cached ~= nil then
+			return cached
+		end
+		local cd = candles[j]
+		local prev = (j > 1) and candles[j - 1].c or cd.o
+		cached = prev ~= 0 and ((cd.c - prev) / prev) or 0
+		chgCache[j] = cached
+		return cached
+	end
+
+	tsort(order, function(a, b)
+		local ca, cb = candles[a], candles[b]
+		local va, vb
+		if col == "close" then
+			va, vb = ca.c, cb.c
+		elseif col == "chg" then
+			va, vb = chgPct(a), chgPct(b)
+		else
+			va, vb = ca.t, cb.t
+		end
+		if va == vb then
+			return a < b
+		end
+		if asc then
+			return va < vb
+		end
+		return va > vb
+	end)
+
+	orderCache.rev = rev
+	orderCache.group = group
+	orderCache.sortCol = hist.sortCol
+	orderCache.sortAsc = hist.sortAsc
+	orderCache.order = order
+	return order
+end
+
+local function styleSortHeaders()
+	local p = ns:Palette()
+	for i, col in ipairs(COLUMNS) do
+		local hdr = hist.headerBtns[i]
+		if not hdr then
+			return
+		end
+		local active = col.sortable and hist.sortCol == col.key
+		local label = col.label
+		if active then
+			-- ASCII carets: WoW's STANDARD_TEXT_FONT lacks Unicode arrow glyphs.
+			label = label .. (hist.sortAsc and " ^" or " v")
+			hdr.label:SetTextColor(p.accent[1], p.accent[2], p.accent[3])
+		else
+			hdr.label:SetTextColor(p.muted[1], p.muted[2], p.muted[3])
+		end
+		hdr.label:SetText(label)
+	end
+end
+
+local function clickSort(colKey)
+	if hist.sortCol == colKey then
+		hist.sortAsc = not hist.sortAsc
+	else
+		hist.sortCol = colKey
+		hist.sortAsc = (colKey ~= "date")
+	end
+	hist.page = 1
+	refresh()
 end
 
 -- ---------------------------------------------------------------------------
 -- Fill one row from a candle. Close + Chg% are colored by the day-over-day
 -- move (close vs the previous candle's close), matching the ticker's green/red.
 -- ---------------------------------------------------------------------------
-local function fillRow(row, cd, prevClose, rowIndex)
-	local p = ns:Palette()
+local function fillRow(row, cd, prevClose, rowIndex, p)
 	-- Zebra striping for readability (every other row a faint wash).
 	row.bg:SetColorTexture(p.text[1], p.text[2], p.text[3], (rowIndex % 2 == 0) and 0.04 or 0)
 
@@ -112,12 +215,14 @@ end
 -- ---------------------------------------------------------------------------
 -- Refresh
 -- ---------------------------------------------------------------------------
-local function refresh()
-	styleToggle(hist.btnDay, ns.db.historyGroup == "day")
-	styleToggle(hist.btnHour, ns.db.historyGroup == "hour")
+refresh = function()
+	UI:StyleButtonToggle(hist.btnDay, ns.db.historyGroup == "day")
+	UI:StyleButtonToggle(hist.btnHour, ns.db.historyGroup == "hour")
 
 	local candles = ns.Analysis:Candles(ns.db.historyGroup, 0)
-	local total = #candles
+	local order = sortedOrder(candles)
+	local total = #order
+	local p = ns:Palette()
 
 	if total == 0 then
 		hist.empty:Show()
@@ -134,7 +239,13 @@ local function refresh()
 	-- Plot rect may not be laid out yet on first open; defer a frame.
 	local W = hist.rows[1]:GetWidth()
 	if W <= 0 then
-		C_Timer.After(0, refresh)
+		if not hist.layoutPending then
+			hist.layoutPending = true
+			C_Timer.After(0, function()
+				hist.layoutPending = false
+				refresh()
+			end)
+		end
 		return
 	end
 	if hist.laidOutWidth ~= W then
@@ -144,24 +255,24 @@ local function refresh()
 
 	local totalPages = max(ceil(total / ROWS), 1)
 	hist.page = F.Clamp(hist.page, 1, totalPages)
+	styleSortHeaders()
 
-	-- Newest row first (NASDAQ shows most-recent at the top).
-	local firstNewest = (hist.page - 1) * ROWS + 1
+	local firstRank = (hist.page - 1) * ROWS + 1
 	for r = 1, ROWS do
-		local newestRank = firstNewest + (r - 1)
-		local j = total - newestRank + 1 -- map newest-rank -> ascending array index
+		local rank = firstRank + (r - 1)
 		local row = hist.rows[r]
-		if j >= 1 then
+		if rank <= total then
+			local j = order[rank]
 			local prevClose = (j > 1) and candles[j - 1].c or candles[j].o
-			fillRow(row, candles[j], prevClose, r)
+			fillRow(row, candles[j], prevClose, r, p)
 			row:Show()
 		else
 			row:Hide()
 		end
 	end
 
-	local shownTo = min(firstNewest + ROWS - 1, total)
-	hist.pageText:SetText(format(L["%d-%d of %d"], firstNewest, shownTo, total))
+	local shownTo = min(firstRank + ROWS - 1, total)
+	hist.pageText:SetText(format(L["%d-%d of %d"], firstRank, shownTo, total))
 	setPagerEnabled(hist.btnPrev, hist.page > 1)
 	setPagerEnabled(hist.btnNext, hist.page < totalPages)
 end
@@ -220,11 +331,27 @@ local function build(panel)
 		underline:SetColorTexture(p.border[1], p.border[2], p.border[3], 0.8)
 	end)
 
-	hist.headerCells = {}
-	for i = 1, #COLUMNS do
-		local fs = UI:Text(headerRow, "OVERLAY", C.Font, 11, "", "muted")
-		fs:SetText(COLUMNS[i].label)
-		hist.headerCells[i] = fs
+	hist.headerBtns = {}
+	for i, col in ipairs(COLUMNS) do
+		local hdr = CreateFrame("Button", nil, headerRow)
+		hdr:SetHeight(22)
+		hdr.label = hdr:CreateFontString(nil, "OVERLAY")
+		hdr.label:SetFont(C.Font, 11, "")
+		hdr.label:SetPoint("CENTER")
+		hdr.label:SetText(col.label)
+		if col.sortable then
+			hdr:SetScript("OnClick", function()
+				clickSort(col.key)
+			end)
+			hdr:SetScript("OnEnter", function(self)
+				self.label:SetAlpha(0.75)
+			end)
+			hdr:SetScript("OnLeave", function(self)
+				self.label:SetAlpha(1)
+			end)
+			UI:SetTooltip(hdr, col.label, L["Click to sort this column."])
+		end
+		hist.headerBtns[i] = hdr
 	end
 
 	-- Data rows (fixed pool, repopulated per page) ------------------------
@@ -254,4 +381,4 @@ local function build(panel)
 	return refresh
 end
 
-tinsert(UI.tabDefs, { id = "history", label = L["History"], tip = L["Browse the full price history as a sortable table."], build = build })
+tinsert(UI.tabDefs, { id = "history", label = L["History"], tip = L["Browse price history. Click column headers to sort."], build = build })

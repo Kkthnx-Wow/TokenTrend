@@ -35,9 +35,18 @@ function ns:CyclePalette()
 	msg(L["Theme set to %s."]:format(ns:Palette().name))
 end
 
+function ns:RequestPriceRefresh()
+	ns.Data:RequestUpdate()
+	msg(L["Refresh"])
+end
+
 -- ---------------------------------------------------------------------------
 -- Slash commands
 -- ---------------------------------------------------------------------------
+function TokenTrend_Toggle()
+	ns.UI:Toggle()
+end
+
 SLASH_TOKENTREND1 = "/tokentrend"
 SLASH_TOKENTREND2 = "/tt"
 
@@ -48,10 +57,7 @@ local commands = {
 	hide = function() ns.UI:Hide() end,
 	toggle = function() ns.UI:Toggle() end,
 	theme = function() ns:CyclePalette() end,
-	refresh = function()
-		ns.Data:RequestUpdate()
-		msg(L["Refresh"])
-	end,
+	refresh = function() ns:RequestPriceRefresh() end,
 	sync = function()
 		local on = not ns.db.sync
 		ns.Sync:SetEnabled(on)
@@ -60,6 +66,16 @@ local commands = {
 	clock = function()
 		ns:SetSetting("clock24", not ns.db.clock24)
 		msg(L["Clock set to %s."]:format(ns.db.clock24 and L["24-hour"] or L["12-hour"]))
+	end,
+	minimap = function()
+		ns.Minimap:Toggle()
+		msg(ns.db.minimap.hide and L["Minimap button hidden."] or L["Minimap button shown."])
+	end,
+	alerts = function()
+		local on = not (ns.db.alertOn30dLow and ns.db.alertOn30dHigh)
+		ns:SetSetting("alertOn30dLow", on)
+		ns:SetSetting("alertOn30dHigh", on)
+		msg(on and L["Price alerts enabled."] or L["Price alerts disabled."])
 	end,
 }
 
@@ -72,6 +88,8 @@ local function printHelp()
 	print(" " .. L["/tt refresh - request a fresh price"])
 	print(" " .. L["/tt sync - toggle history sharing"])
 	print(" " .. L["/tt clock - toggle 12/24-hour time"])
+	print(" " .. L["/tt minimap - toggle the minimap button"])
+	print(" " .. L["/tt alerts - toggle price alerts"])
 end
 
 SlashCmdList["TOKENTREND"] = function(input)

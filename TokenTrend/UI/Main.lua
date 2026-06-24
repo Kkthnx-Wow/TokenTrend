@@ -12,17 +12,14 @@ local F = ns.F
 local UI = {}
 ns.UI = UI
 
+local Skin = ns.Skin
+
 UI.tabDefs = {} -- { { id, label, build(panel) -> refreshFn } }
 UI.themed = {} -- recolor closures, replayed on theme change
 UI.activeTab = 1
 
--- 1px solid backdrop = clean financial-terminal framing.
-local BACKDROP = {
-	bgFile = "Interface\\Buttons\\WHITE8X8",
-	edgeFile = "Interface\\Buttons\\WHITE8X8",
-	edgeSize = 1,
-}
-ns.UI.BACKDROP = BACKDROP
+-- Shared 1px pixel backdrop (NDui bdTex) for banners/tooltips.
+ns.UI.BACKDROP = Skin.BackdropTable()
 
 -- ---------------------------------------------------------------------------
 -- Theming primitives. Everything skinnable registers a closure so a live
@@ -42,20 +39,33 @@ function UI:ApplyTheme()
 	end
 end
 
--- Skin a backdrop frame in a given role: "window" | "panel" | "plot".
+-- Skin a frame: NDui pixel border + optional shadow/bg texture.
+-- role: "window" | "panel" | "plot"
 function UI:Skin(frame, role)
-	if not frame.SetBackdrop then
-		Mixin(frame, BackdropTemplateMixin)
+	Skin.ApplyPanelBackdrop(frame, role)
+	if role == "window" and not frame.__ttShadow then
+		Skin.CreateShadow(frame, 4)
+		Skin.CreateBgTex(frame, 0.06)
+	elseif role == "panel" and not frame.__ttBgTex then
+		Skin.CreateBgTex(frame, 0.04)
 	end
-	frame:SetBackdrop(BACKDROP)
-	self:OnTheme(function(p)
-		local bg = p.bg
-		if role == "panel" then
-			bg = p.panel
-		end
-		frame:SetBackdropColor(bg[1], bg[2], bg[3], 1)
-		frame:SetBackdropBorderColor(p.border[1], p.border[2], p.border[3], 1)
+	self:OnTheme(function()
+		Skin.RefreshBackdrop(frame)
 	end)
+end
+
+-- Toggle styling for chart/history control buttons.
+function UI:StyleButtonToggle(btn, active)
+	if not btn then
+		return
+	end
+	local p = ns:Palette()
+	Skin.SetButtonActive(btn, active)
+	if active then
+		btn.label:SetTextColor(p.accent[1], p.accent[2], p.accent[3])
+	else
+		btn.label:SetTextColor(p.muted[1], p.muted[2], p.muted[3])
+	end
 end
 
 -- A themed FontString. role: "text" | "muted" | "accent".
@@ -70,11 +80,10 @@ function UI:Text(parent, layer, fontPath, size, flags, role)
 	return fs
 end
 
--- A small text button with hover highlight. onClick(self).
+-- Flat NDui-style button: pixel border, gradient wash, accent hover.
 function UI:Button(parent, text, width, onClick)
-	local b = CreateFrame("Button", nil, parent, "BackdropTemplate")
+	local b = CreateFrame("Button", nil, parent)
 	b:SetSize(width or 64, 22)
-	b:SetBackdrop(BACKDROP)
 
 	local label = b:CreateFontString(nil, "OVERLAY")
 	label:SetFont(C.Font, 12, "")
@@ -83,21 +92,19 @@ function UI:Button(parent, text, width, onClick)
 	label:SetText(text)
 	b.label = label
 
-	b:SetScript("OnEnter", function()
-		local p = ns:Palette()
-		b:SetBackdropColor(p.accent[1], p.accent[2], p.accent[3], 0.25)
-	end)
-	b:SetScript("OnLeave", function()
-		local p = ns:Palette()
-		b:SetBackdropColor(p.panel[1], p.panel[2], p.panel[3], 1)
-	end)
+	Skin.AttachButtonBg(b)
+
 	if onClick then
 		b:SetScript("OnClick", onClick)
 	end
 
 	self:OnTheme(function(p)
-		b:SetBackdropColor(p.panel[1], p.panel[2], p.panel[3], 1)
-		b:SetBackdropBorderColor(p.border[1], p.border[2], p.border[3], 1)
+		if b.SetFlatRest then
+			b:SetFlatRest()
+		end
+		if b.__ttActive then
+			b:SetFlatHover(true)
+		end
 		label:SetTextColor(p.text[1], p.text[2], p.text[3])
 	end)
 	return b
@@ -120,7 +127,8 @@ function UI:SetTooltip(frame, title, body, anchor)
 		GameTooltip:SetOwner(self, self.ttAnchor)
 		GameTooltip:AddLine(self.ttTitle)
 		if self.ttBody then
-			GameTooltip:AddLine(self.ttBody, 0.7, 0.7, 0.7, true)
+			local p = ns:Palette()
+			GameTooltip:AddLine(self.ttBody, p.muted[1], p.muted[2], p.muted[3], true)
 		end
 		GameTooltip:Show()
 	end)
@@ -133,11 +141,10 @@ end
 -- flushes it Bear-red so "this closes things" reads instantly. No more stock
 -- Blizzard X clashing with our charcoal.
 function UI:CloseButton(parent)
-	local b = CreateFrame("Button", nil, parent, "BackdropTemplate")
+	local b = CreateFrame("Button", nil, parent)
 	b:SetSize(22, 22)
-	b:SetBackdrop(BACKDROP)
+	Skin.AttachButtonBg(b, { noHover = true })
 
-	-- "\195\151" is the multiplication sign - a tidier X than a lowercase x.
 	local glyph = b:CreateFontString(nil, "OVERLAY")
 	glyph:SetFont(C.Font, 15, "")
 	glyph:SetShadowOffset(1, -1)
@@ -147,13 +154,14 @@ function UI:CloseButton(parent)
 
 	local function rest()
 		local p = ns:Palette()
-		b:SetBackdropColor(p.panel[1], p.panel[2], p.panel[3], 1)
-		b:SetBackdropBorderColor(p.border[1], p.border[2], p.border[3], 1)
+		if b.SetFlatRest then
+			b:SetFlatRest()
+		end
 		glyph:SetTextColor(p.muted[1], p.muted[2], p.muted[3])
 	end
 	b:SetScript("OnEnter", function()
-		b:SetBackdropColor(C.Bear[1], C.Bear[2], C.Bear[3], 0.85)
-		b:SetBackdropBorderColor(C.Bear[1], C.Bear[2], C.Bear[3], 1)
+		Skin.TintBackdrop(b.__bg, C.Bear, 0.85)
+		b.__bg:SetBackdropBorderColor(C.Bear[1], C.Bear[2], C.Bear[3], 1)
 		glyph:SetTextColor(1, 1, 1)
 	end)
 	b:SetScript("OnLeave", rest)
@@ -229,7 +237,9 @@ function UI:RangeBar(parent, captionText)
 			self.marker:SetColorTexture(
 				bear[1] * frac + bull[1] * (1 - frac),
 				bear[2] * frac + bull[2] * (1 - frac),
-				bear[3] * frac + bull[3] * (1 - frac), 1)
+				bear[3] * frac + bull[3] * (1 - frac),
+				1
+			)
 		else
 			local p = ns:Palette()
 			self.marker:SetColorTexture(p.accent[1], p.accent[2], p.accent[3], 1)
@@ -289,7 +299,7 @@ function UI:Build()
 
 	-- Brand icon, sitting just left of the name.
 	local icon = header:CreateTexture(nil, "ARTWORK")
-	icon:SetSize(30, 30)
+	icon:SetSize(40, 40)
 	icon:SetPoint("TOPLEFT", 12, -12)
 	F.SetTokenIcon(icon)
 	self.icon = icon
@@ -389,10 +399,7 @@ function UI:Build()
 	themeBtn:SetPoint("RIGHT", 0, 0)
 	self:SetTooltip(themeBtn, L["Theme"], L["Cycle between the color themes."])
 	local refreshBtn = self:Button(footer, L["Refresh"], 72, function()
-		ns.Data:RequestUpdate()
-		C_Timer.After(1, function()
-			ns.Data:OnPriceUpdated()
-		end)
+		ns:RequestPriceRefresh()
 	end)
 	refreshBtn:SetPoint("RIGHT", themeBtn, "LEFT", -8, 0)
 	self:SetTooltip(refreshBtn, L["Refresh"], L["Request a fresh token price from the server."])
@@ -423,18 +430,11 @@ end
 -- neutral, and only the active panel shown. Pure styling + visibility, no
 -- content refresh - so it's cheap to replay after a theme swap.
 function UI:StyleTabs()
-	local p = ns:Palette()
 	for i, def in ipairs(self.tabDefs) do
 		local active = (i == self.activeTab)
 		def.panel:SetShown(active)
 		local btn = self.tabButtons[i]
-		if active then
-			btn.label:SetTextColor(p.accent[1], p.accent[2], p.accent[3])
-			btn:SetBackdropBorderColor(p.accent[1], p.accent[2], p.accent[3], 1)
-		else
-			btn.label:SetTextColor(p.text[1], p.text[2], p.text[3])
-			btn:SetBackdropBorderColor(p.border[1], p.border[2], p.border[3], 1)
-		end
+		UI:StyleButtonToggle(btn, active)
 	end
 end
 
@@ -458,7 +458,7 @@ function UI:Refresh()
 	end
 	local stats = ns.Analysis:Stats()
 
-	self.subtitle:SetText(("%s  \194\183  %s %s"):format(L["WoW Token"], L["Region"], F.GetRegionName()))
+	self.subtitle:SetText(("%s  %s  %s %s"):format(L["WoW Token"], F.Sep, L["Region"], F.GetRegionName()))
 
 	if stats.current then
 		self.priceText:SetText(F.FormatGold(stats.current))
@@ -473,7 +473,9 @@ function UI:Refresh()
 			self.arrow:Show()
 			F.SetArrow(self.arrow, cAbs > 0)
 			self.arrow:SetVertexColor(r, g, b)
-			self.changeText:SetText(("%s%s  (%s)"):format(cAbs > 0 and "+" or "", F.FormatGold(math.abs(cAbs)), F.FormatPct(cPct)))
+			self.changeText:SetText(
+				("%s%s  (%s)"):format(cAbs > 0 and "+" or "", F.FormatGold(math.abs(cAbs)), F.FormatPct(cPct))
+			)
 			self.changeText:SetTextColor(r, g, b)
 		else
 			self.arrow:Hide()
@@ -481,20 +483,32 @@ function UI:Refresh()
 			self.changeText:SetTextColor(C.Neutral[1], C.Neutral[2], C.Neutral[3])
 		end
 	else
-		self.priceText:SetText("\226\128\148")
+		self.priceText:SetText(F.EmDash)
 		self.arrow:Hide()
 		self.changeText:SetText(L["Waiting for first price..."])
 	end
 
 	self.dayRange:Update(stats.dayLow, stats.dayHigh, stats.current)
 
-	self.statusText:SetText(("%s: %s   \194\183   %s: %d"):format(L["Last update"], F.AgoString(ns.Data.lastUpdate), L["Samples"], stats.samples))
+	self.statusText:SetText(
+		("%s: %s   %s   %s: %d / %d"):format(
+			L["Last update"],
+			F.AgoString(ns.Data.lastUpdate),
+			F.Sep,
+			L["Samples"],
+			stats.samples,
+			ns.db.maxSamples
+		)
+	)
 
 	if self.clockBtn then
 		self.clockBtn.label:SetText(ns.db.clock24 and L["24h"] or L["12h"])
-		self:SetTooltip(self.clockBtn, L["Clock"],
+		self:SetTooltip(
+			self.clockBtn,
+			L["Clock"],
 			ns.db.clock24 and L["Showing 24-hour time. Click for 12-hour (AM/PM)."]
-				or L["Showing 12-hour time. Click for 24-hour."])
+				or L["Showing 12-hour time. Click for 24-hour."]
+		)
 	end
 
 	local def = self.tabDefs[self.activeTab]

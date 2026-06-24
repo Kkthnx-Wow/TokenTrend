@@ -35,6 +35,7 @@ L["Collecting price history - the chart fills in as new prices are recorded."] =
 -- Header / price
 L["Current Price"] = "Current Price"
 L["Change"] = "Change"
+L["Day Change"] = "Day Change"
 L["No change"] = "No change"
 
 -- Tabs
@@ -98,7 +99,10 @@ L["Flat"] = "Flat"
 -- Alerts / signals
 L["BUY SIGNAL"] = "BUY SIGNAL"
 L["At or near a 30-day low. Good time to buy."] = "At or near a 30-day low. Good time to buy."
+L["SELL SIGNAL"] = "SELL SIGNAL"
+L["At or near a 30-day high. Good time to sell."] = "At or near a 30-day high. Good time to sell."
 L["Token is at a 30-day low (%s)."] = "Token is at a 30-day low (%s)."
+L["Token is at a 30-day high (%s)."] = "Token is at a 30-day high (%s)."
 L["Cheapest hours of the day"] = "Cheapest hours of the day"
 L["Cheapest days of the week"] = "Cheapest days of the week"
 L["Best time to buy"] = "Best time to buy"
@@ -109,6 +113,7 @@ L["Not enough history yet. Keep playing - data builds over time."] = "Not enough
 L["Theme"] = "Theme"
 L["The Terminal"] = "The Terminal"
 L["Lunar Exchange"] = "Lunar Exchange"
+L["Class Station"] = "Class Station"
 
 -- Sync panel
 L["Sync"] = "Sync"
@@ -134,9 +139,22 @@ L["/tt theme - cycle color theme"] = "/tt theme - cycle color theme"
 L["/tt refresh - request a fresh price"] = "/tt refresh - request a fresh price"
 L["/tt sync - toggle history sharing"] = "/tt sync - toggle history sharing"
 L["/tt clock - toggle 12/24-hour time"] = "/tt clock - toggle 12/24-hour time"
+L["/tt minimap - toggle the minimap button"] = "/tt minimap - toggle the minimap button"
+L["/tt alerts - toggle price alerts"] = "/tt alerts - toggle price alerts"
 L["Theme set to %s."] = "Theme set to %s."
 L["History sharing enabled."] = "History sharing enabled."
 L["History sharing disabled."] = "History sharing disabled."
+L["Price alerts enabled."] = "Price alerts enabled."
+L["Price alerts disabled."] = "Price alerts disabled."
+L["Minimap button hidden."] = "Minimap button hidden."
+L["Minimap button shown."] = "Minimap button shown."
+L["Minimap button hidden. Type /tt minimap to restore."] = "Minimap button hidden. Type /tt minimap to restore."
+L["Right-click for menu"] = "Right-click for menu"
+L["Toggle window"] = "Toggle window"
+L["Hide minimap button"] = "Hide minimap button"
+L["Paused while in an instance."] = "Paused while in an instance."
+L["Click to sort this column."] = "Click to sort this column."
+L["Browse price history. Click column headers to sort."] = "Browse price history. Click column headers to sort."
 L["Clock set to %s."] = "Clock set to %s."
 
 -- Clock / time format
@@ -175,6 +193,10 @@ L["Share price history with guild and group members to fill gaps."] = "Share pri
 L["Price over time with moving averages and candlesticks."] = "Price over time with moving averages and candlesticks."
 L["Highs, lows, averages, and best times to buy."] = "Highs, lows, averages, and best times to buy."
 L["Browse the full price history as a sortable table."] = "Browse the full price history as a sortable table."
+
+-- Keybindings (Bindings.xml)
+_G["BINDING_HEADER_TOKENTREND"] = "TokenTrend"
+_G["BINDING_NAME_TOKENTREND_TOGGLE"] = "Toggle window"
 
 -- Day-of-week short names (Sunday-first, matches date('*t').wday)
 L["DAY_1"] = "Sun"

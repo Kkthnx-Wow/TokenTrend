@@ -59,21 +59,25 @@ end
 
 -- Commit a price into history. Within sampleInterval we just refine the most
 -- recent point's value (so the "current candle" tracks the live price) instead
--- of spamming near-duplicate rows into the save file.
+-- of spamming near-duplicate rows into the save file. Returns true when history
+-- actually changed (new row or refined price).
 function Data:Record(gold)
 	local h = self:GetHistory()
 	local now = time()
 	local last = h[#h]
 
 	if last and (now - last.t) < ns.db.sampleInterval then
+		if last.p == gold then
+			return false
+		end
 		last.p = gold
 	else
 		h[#h + 1] = { t = now, p = gold }
 		prune(h, ns.db.maxSamples)
 	end
 
-	-- History changed (refined tail or new row): invalidate analysis memos.
 	self.revision = self.revision + 1
+	return true
 end
 
 -- Merge externally-sourced samples (peer sync) into history. Insert-only and
@@ -132,14 +136,17 @@ function Data:OnPriceUpdated()
 	-- we'll just catch the next (non-secret) update.
 	if F.IsSecret(copper) then return end
 
+	local prev = self.current
 	local gold = F.CopperToGold(copper)
 	if gold <= 0 then return end
 
 	self.current = gold
 	self.lastUpdate = time()
-	self:Record(gold)
+	local changed = self:Record(gold)
 
-	ns:Fire("DataUpdated")
+	if changed or prev ~= gold then
+		ns:Fire("DataUpdated")
+	end
 end
 
 -- Politely poke Blizzard for a fresh price (throttled internally by them).
