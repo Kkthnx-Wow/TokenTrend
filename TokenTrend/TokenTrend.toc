@@ -1,8 +1,8 @@
-## Interface: 120005, 120007
+## Interface: 120007
 ## Title: |cff00ccffToken|rTrend
 ## Notes: Financial-terminal price tracking for the WoW Token. Charts, moving averages, and buy/sell signals. |n|n|cff5C8BCFDeveloper|cffffffff:|r |nJosh "|CFF7b8489Kkthnx|r" Russell|n|n|cff009cdePayPal|r|cffffffff:|r |n|cffffffffwww.paypal.me/KkthnxTV|r|n|n|cfff96854Patreon|r|cffffffff:|r |n|cffffffffwww.patreon.com/Kkthnx|r
 ## Author: Josh
-## Version: 1.2.0
+## Version: 1.1.0
 ## SavedVariables: TokenTrendDB
 ## IconTexture: Interface\ICONS\wow_token01
 ## X-Category: Auction House & Vendors
