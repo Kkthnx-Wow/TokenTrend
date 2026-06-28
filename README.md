@@ -1,11 +1,11 @@
 <div align="center">
-<img width="760" height="498" alt="image" src="https://github.com/user-attachments/assets/c2102f32-19ab-4f08-abbd-58b3df2f8f57" />
-
 # TokenTrend
 
 **A financial-terminal for the WoW Token — chart the price, read the trend, and time your buys like a market.**
 
 *Stock-market-grade tooling for a single number: what your region's WoW Token costs right now, and where it's been.*
+
+<img width="256" height="256" alt="New Project (3)" src="https://github.com/user-attachments/assets/b0468d4d-8255-469a-88d0-b8c2dd2a29b9" />
 
 </div>
 
