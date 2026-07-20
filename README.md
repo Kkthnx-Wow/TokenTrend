@@ -2,186 +2,165 @@
 
 # TokenTrend
 
-**A financial-terminal for the WoW Token — chart the price, read the trend, and time your buys like a market.**
+**A price terminal for the WoW Token. Chart the price, read the trend, and time your buys like a market.**
 
-*Stock-market-grade tooling for a single number: what your region's WoW Token costs right now, and where it's been.*
+*Everything you'd want to know about one number. What the token costs in your region right now, and where it's been.*
 
-<img width="256" height="256" alt="New Project (3)" src="https://github.com/user-attachments/assets/b0468d4d-8255-469a-88d0-b8c2dd2a29b9" />
+<img width="256" height="256" alt="TokenTrend" src="https://github.com/user-attachments/assets/b0468d4d-8255-469a-88d0-b8c2dd2a29b9" />
 
 </div>
 
 ---
 
-## Overview
+## What it does
 
-**TokenTrend** turns the WoW Token's market price into a proper trading terminal. It quietly samples the price while you play, banks the history in SavedVariables, and renders it as line charts, candlesticks, moving averages, and volatility heatmaps — so "is now a good time to buy?" becomes a glance, not a guess.
+TokenTrend turns the WoW Token price into a proper chart. It quietly records the price while you play, saves the history, and draws it as line charts, candlesticks, moving averages, and heatmaps. So "is now a good time to buy?" becomes something you can see at a glance instead of guess.
 
-Because addons only run while you're logged in, TokenTrend can't see the past on its own. It builds your price history one sample at a time. But you don't have to start from an empty chart. You can **seed it with real history** from the website in about ten seconds (see [Start With a Full Chart](#start-with-a-full-chart) below), and peer sync fills gaps from your guild. The longer you play, the richer your charts get.
+Here's the catch that every price addon has. Addons only run while you're logged in, so TokenTrend can't see the past on its own. It builds your history one reading at a time. But you don't have to start from an empty chart. You can seed it with real history from my website in about ten seconds, and it'll keep filling in from there. More on that right below.
 
-- **Terminal-grade, not toy** — candlesticks, moving averages, OHLC tables, and a buy signal, all from live data.
-- **Region-aware** — the token economy is region-wide, so history is keyed by region and shared across your characters (and, optionally, your guild).
-- **Performance-first** — event-driven sampling, memoized analysis, pooled textures, and a hover readout that idles when the mouse isn't on the plot.
-- **Midnight-ready** — every price read is guarded against secret values, so nothing errors in combat.
+A few things that make it worth using:
 
----
-
-## Installation
-
-**Manual**
-
-1. Download the latest release and extract the `TokenTrend` folder into `World of Warcraft\_retail_\Interface\AddOns`.
-2. Restart the game (or `/reload` if you're already in-game).
-3. Open the window with `/tt`. The first price lands within a few seconds; charts fill in as history accumulates.
-
-There's nothing to configure to get started — TokenTrend begins recording the moment it loads.
+- **Real charts, not a toy.** Candlesticks, moving averages, an OHLC table, and buy and sell signals, all from live data.
+- **Region-aware.** The token economy is region-wide, so your history is shared across all your characters on the same region.
+- **Light on your game.** It samples on events, caches its math, and reuses textures, so it stays cheap even with a long history.
+- **Midnight-ready.** Every price read is guarded so nothing errors out in combat.
 
 ---
 
-## Start With a Full Chart
+## Install
 
-A fresh install has no history yet, so the chart opens empty. You don't have to wait weeks to collect it. Seed the chart with real, recently-recorded prices from the companion site in about ten seconds.
+1. Download the latest release and drop the `TokenTrend` folder into `World of Warcraft\_retail_\Interface\AddOns`.
+2. Restart the game, or type `/reload` if you're already in.
+3. Open it with `/tt`. The first price shows up within a few seconds.
 
-1. In-game, open TokenTrend with `/tt` and click **Import** in the footer (or run `/tt import`).
-2. Don't have a seed string yet? Click **Get URL** in that window, or run `/tt url`, to get the web address. Copy it and open it in your browser.
-3. On **[kkthnx.com/wow/token](https://kkthnx.com/wow/token)**, hit **Copy** next to your region (US, EU, KR, or TW).
+There's nothing to set up. TokenTrend starts recording the moment it loads.
+
+---
+
+## Start with a full chart
+
+A fresh install has no history yet, so the chart opens empty. You don't have to wait weeks to fill it. You can seed it with real, recent prices from my site in about ten seconds.
+
+1. In-game, open TokenTrend with `/tt` and click **Import** in the footer. Or type `/tt import`.
+2. Don't have the string yet? Click **Get URL** in that window, or type `/tt url`. It hands you the web address to copy.
+3. Open [kkthnx.com/wow/token](https://kkthnx.com/wow/token) in your browser and hit **Copy** next to your region (US, EU, KR, or TW).
 4. Back in-game, paste the string into the Import box and confirm.
 
-Your chart fills in immediately. The prices are real history sourced from Blizzard's official Game Data API, not filler. Import is **insert-only**, so it never overwrites readings you've recorded yourself, and it's safe to run more than once. From here, TokenTrend records the live price on its own and peer sync backfills the rest.
+Your chart fills in right away. These are real prices pulled from Blizzard's official data, not made-up filler. The import only adds to empty spots, so it never overwrites anything you've recorded yourself, and you can run it more than once safely. From there, TokenTrend records the live price on its own.
 
-> **Why a copy/paste and not an auto-download?** Addons can't reach the internet directly. The website can see recorded history the addon can't, so handing it over as a short string you paste in is the cleanest bridge between the two.
+**Why copy and paste instead of a download button?** Addons can't reach the internet. My website can see recorded history that the addon can't, so handing it over as a short string you paste in is the cleanest way to bridge the two.
 
 ---
 
-## Getting Started
+## Commands
 
-| Command | Description |
+| Command | What it does |
 | --- | --- |
-| `/tt` or `/tokentrend` | Toggle the window |
+| `/tt` or `/tokentrend` | Open or close the window |
 | `/tt show` | Open the window |
 | `/tt hide` | Close the window |
 | `/tt theme` | Cycle the color theme |
-| `/tt refresh` | Request a fresh price from the server |
-| `/tt import` | Open the Import window to paste history from the website |
+| `/tt refresh` | Ask the server for a fresh price |
+| `/tt import` | Open the Import window to paste history from the site |
 | `/tt url` | Show the seed page address to copy into your browser |
-| `/tt sync` | Toggle peer history sharing (on by default) |
-| `/tt clock` | Toggle 12- / 24-hour time (24-hour by default) |
+| `/tt sync` | Toggle sharing history with your guild and group |
+| `/tt clock` | Switch between 12 and 24-hour time |
 
-You can also **left-click** the minimap button to toggle the window, and **drag** it around the minimap ring to reposition it.
+You can also left-click the minimap button to open the window, and drag it around the minimap ring to move it.
 
 ---
 
-## Features
+## What's inside
 
-### Live Price
+### Live price
 
-- **Price header** — the current token price with a bull/bear arrow showing the **net change vs the previous close** (the day-over-day move), color-coded green/red/neutral.
-- **Day Range bar** — a centered low↔high gauge marking where today's price sits between its own low and high.
+The header shows the current price with an up or down arrow for the day's move, colored green, red, or neutral. Under it, a Day Range bar shows where today's price sits between its own low and high.
 
 ### Charts
 
-- **Line chart** — price plotted with **LibGraph-2.0**, with optional **7-day** and **30-day moving averages** overlaid so you can instantly see whether the current price is above or below its historical norm.
-- **Candlestick charts** — group raw samples into **hourly** or **daily** Open/High/Low/Close candles, hand-drawn from pooled textures (green = bullish, red = bearish).
-- **Hover readout** — a crosshair snaps to the nearest sample as you move across the plot: date + price in line mode, full OHLC in candle mode. It arms only while the mouse is over the chart, so it costs nothing at rest.
-- **Range selector** — view the last 7 / 30 / 90 days or all of history.
+The line chart plots the price with optional 7-day and 30-day moving averages, so you can see at a glance whether the current price is above or below its normal range. Switch to candlesticks to group readings into hourly or daily open, high, low, and close candles. Green candles are up, red are down.
 
-### Signals & Timing
+Move your mouse across the chart and a crosshair snaps to the nearest reading. In line mode it shows the date and price. In candle mode it shows the full open, high, low, and close. You can view the last 7, 30, or 90 days, or all of it.
 
-- **Buy signal** — a green banner + arrow fires when the price drops to (or within 1% of) a **30-day low**.
-- **Volatility heatmaps** — time-of-day and day-of-week grids showing which **hours** and **weekdays** historically offer the cheapest prices, with a **"best time to buy"** callout.
-- **30-Day Range gauge** — where the current price sits inside its 30-day band, tagged **Cheap / Fair value / Expensive**.
+### Signals and timing
 
-### Stats & History
+A green buy banner fires when the price hits a 30-day low, or gets within one percent of it. There are also heatmaps showing which hours of the day and which days of the week have historically been the cheapest, with a "best time to buy" line that reads the answer off the data for you. A 30-day range gauge tags the current price as Cheap, Fair value, or Expensive.
 
-- **Stats panel** — previous close, day range, 7-day / 30-day / all-time low, high and average, sample count, and tracking-start date.
-- **Historical Data table** — a paginated **OHLC table** (date, close, open, high, low, day-over-day %), daily or hourly, newest first — NASDAQ "Historical Data" style. Rows are virtualized, so a long history costs the same as a short one.
+### Stats and history
 
-### Appearance
+The Stats tab lists previous close, day range, and the low, high, and average for the last 7 days, 30 days, and all time, plus your sample count and when you started tracking. The History tab is a full price table (date, close, open, high, low, and daily percent change), daily or hourly, newest first, like a stock site's history page.
 
-- **Two themes** — *The Terminal* (cyan on charcoal, default) and *Lunar Exchange* (blue on silver). Swap live with `/tt theme` — no reload.
-- **Themed chrome** — custom close button, footer controls, and a token-gold brand icon, all skinned to match the active palette.
-- **12 / 24-hour time** — every time-of-day readout (chart hover, History table, volatility hours) follows your preference. Flip it live with the compact footer clock button or `/tt clock` (24-hour by default).
+### Looks
 
-### Quality of Life
+Two themes ship with it. The Terminal is cyan on charcoal and is the default. Lunar Exchange is blue on silver. Swap between them live with `/tt theme`, no reload needed. The close button, footer controls, and brand icon all match the active theme. Every time readout follows your 12 or 24-hour preference, which you can flip anytime.
 
-- **Seed from the website** — start with a full chart instead of an empty one by pasting real history from **[kkthnx.com/wow/token](https://kkthnx.com/wow/token)**. See **[Start With a Full Chart](#start-with-a-full-chart)** above.
-- **Peer history sync** — backfill your offline gaps by trading price samples with guildmates and groupmates. See **[Peer Sync](#peer-sync)** below for the full picture.
-- **Minimap button** — left-click to toggle, drag to reposition.
-- **Slash commands** — full `/tt` command set (see above).
-- **Lean saves** — samples are committed at most once per 20 minutes and capped per region, so your SavedVariables stay small.
+### Nice touches
+
+- **Seed from the site.** Start with a full chart instead of an empty one. See [Start with a full chart](#start-with-a-full-chart) above.
+- **Peer sync.** Fill your offline gaps by trading price history with guildmates and group members. See [Peer sync](#peer-sync) below.
+- **Minimap button.** Left-click to open, drag to move.
+- **Small save file.** History is saved at most once every 20 minutes and capped per region, so it never bloats your account.
 
 ---
 
-## Peer Sync
+## Peer sync
 
-Because addons only run while you're logged in, you can only record the token price during your own play sessions — every hour you're offline is a hole in your chart. **Peer Sync fills those holes** by swapping price history with other TokenTrend users, so your charts, candles, and volatility heatmaps are rich from the first session instead of after weeks of solo collecting.
+Since the addon only records while you're logged in, every hour you're offline is a gap in your chart. Peer sync fills those gaps by swapping price history with other TokenTrend users. So your charts and heatmaps get rich from real play instead of weeks of solo collecting.
 
-> **It can't change *today's* price.** The current market price is a server value — identical for everyone in your region. Sync only enriches the **history behind** that number; it never touches the live price.
+One thing it does not do is change today's price. The current price is a server value, the same for everyone in your region. Sync only fills in the history behind that number. It never touches the live price.
 
-### What syncs with whom
+### Who you sync with
 
-- **Scope:** your **guild** and your **party/raid**. WoW has no global addon channel, so reach is bounded to people you're actually grouped or guilded with.
-- **Region-scoped:** the token economy is region-wide, so peers only accept data tagged for the **same region**. Cross-region messages are dropped.
-- **On by default**, toggled any time with `/tt sync` or the panel's Enable/Disable button.
+You sync with your guild and your party or raid. WoW has no global addon channel, so it only reaches people you're actually grouped or guilded with. It's also region-locked, since the token economy is per region, so data from another region gets dropped. Sync is on by default and you can toggle it anytime with `/tt sync` or the panel's own button.
 
-### How peers exchange data
+### How it works
 
-Each addon advertises a compact per-day **coverage manifest** (how many samples it holds for each day, plus a checksum). A peer compares it to its own coverage, **requests only the days it's missing**, and the other side streams back just those samples. Everything flows through a **throttled, disconnect-safe send queue** so a busy guild can't get you booted for chat flooding.
+Each copy of the addon shares a small summary of which days it has data for. Another copy compares that to what it has, asks only for the days it's missing, and gets just those back. It all runs through a throttled queue that's safe to interrupt, so a busy guild can't get you booted for chat spam.
 
-### Trust & anti-poisoning
+### Keeping the data clean
 
-Sync uses a deliberately conservative "basic" trust model:
+Sync is careful about what it trusts:
 
-- **Insert-only merge** — incoming samples only fill **empty** time-slots. Your own first-hand readings are **never overwritten** by a peer's.
-- **Plausibility bounds** — prices outside a sane range (roughly 1k–100M gold) are rejected as garbage.
-- **No time travel** — future-dated samples are refused.
-- **Same-region only** and a **per-peer session budget** cap how much any single peer can hand you.
+- **It only adds, never overwrites.** Incoming data fills empty slots only. Your own readings always win.
+- **It rejects nonsense.** Prices outside a sane range (roughly 1,000 to 100 million gold) are thrown out.
+- **No future dates.** Samples dated in the future are refused.
+- **Region-locked, with a per-person cap** on how much any single peer can hand you.
 
-### Safety & courtesy
+### The sync panel
 
-- **Instance-safe** — every send and receive stands down while you're inside a dungeon, raid, or other instance (addon comms are blocked there in Midnight 12.0).
-- **Quiet** — roster changes are debounced, re-advertisements are rate-limited, and there's no global spam.
-
-### The Sync panel
-
-The footer **Sync** button opens a popover showing, at a glance:
-
-- **Status** with an **Enable / Disable** toggle.
-- **Samples gained this session.**
-- **Backfilled from** — peers whose data filled your gaps.
-- **Shared with** — peers you helped in return.
+The footer **Sync** button opens a small panel that shows your on/off status, how many samples you gained this session, who filled your gaps, and who you helped in return.
 
 ---
 
-## Configuration
+## Settings
 
-Most things are controlled inline from the window itself:
+Almost everything is controlled right from the window:
 
-- **Theme** — `/tt theme`, or the **Theme** button in the footer.
-- **Chart mode / range / moving averages** — the toggle row above the chart.
-- **History grouping** — Daily / Hourly toggles on the History tab.
-- **Peer sync** — `/tt sync` toggles history sharing on/off (on by default).
-- **Clock** — `/tt clock`, or the **24h / 12h** button in the footer.
+- **Theme** with `/tt theme` or the Theme button.
+- **Chart mode, range, and moving averages** with the toggle row above the chart.
+- **History grouping** with the Daily and Hourly toggles on the History tab.
+- **Peer sync** with `/tt sync`.
+- **Clock** with `/tt clock` or the 24h/12h button.
 
-All toggles apply **live** — TokenTrend re-themes and re-renders without a `/reload`.
-
----
-
-## How It Works
-
-1. **Fetch** — `C_WowTokenPublic.UpdateMarketPrice()` asks the server for an update; the `TOKEN_MARKET_PRICE_UPDATED` event then lets us read the value with `C_WowTokenPublic.GetCurrentMarketPrice()`. A `C_Timer` ticker keeps the heartbeat going.
-2. **Store** — each price is logged with a timestamp into `TokenTrendDB`, keyed by **region**. Samples are committed at most once per 20 minutes and capped at 6000 points per region to keep the save file lean.
-3. **Analyze** — moving averages (sliding window, O(n)), candle aggregation, trailing lows/highs, and hour/weekday volatility buckets are computed on demand and **memoized** against a data-revision counter, so nothing recomputes until a new price actually lands.
-4. **Render** — the line view uses LibGraph; candlesticks are hand-drawn axis-aligned texture rectangles from a reusable pool.
-5. **Sync** *(optional)* — over WoW's addon channels (guild + party/raid; there is no global channel), peers exchange a compact per-day coverage **manifest**, request only the days they're missing, and stream back the buckets — delivered through a throttled, disconnect-safe send queue and merged insert-only.
-6. **Import** *(optional)* — a seed string copied from [kkthnx.com/wow/token](https://kkthnx.com/wow/token) is decoded and merged the same insert-only way, so a brand-new install can open with a full chart instead of an empty one.
-
-### Midnight (12.0) note
-
-Money values can be *secret* in combat. TokenTrend guards every price read with `issecretvalue()` and simply skips a sample rather than doing arithmetic on a sealed value — it'll catch the next clean update.
+Every change applies live. TokenTrend re-themes and redraws without a reload.
 
 ---
 
-## Layout
+## How it works under the hood
+
+For the curious, here's the short version:
+
+1. **Fetch.** It asks the server for a price update and reads the value back when the game fires the update event. A timer keeps a steady heartbeat going.
+2. **Store.** Each price gets saved with a timestamp, keyed by region. It saves at most once every 20 minutes and caps at 6,000 points per region to keep the file small.
+3. **Analyze.** Moving averages, candles, highs and lows, and the volatility buckets are all worked out on demand and cached, so nothing recalculates until a new price actually lands.
+4. **Render.** The line chart uses LibGraph. The candlesticks are drawn from a reused pool of textures.
+5. **Sync and import.** Both add price history the same careful, add-only way, so neither one can ever clobber what you've recorded yourself.
+
+**A note on Midnight (12.0):** money values can be hidden in combat. TokenTrend checks for that before doing any math and just skips that reading rather than erroring, then catches the next clean one.
+
+---
+
+## File layout
 
 ```
 TokenTrend/
@@ -194,7 +173,7 @@ TokenTrend/
 │   └── Core.lua        # init glue + slash commands
 ├── Modules/
 │   ├── Data.lua        # token polling + history recording + peer merge
-│   ├── Analysis.lua    # MAs, candles, lows/highs, volatility (memoized)
+│   ├── Analysis.lua    # moving averages, candles, highs/lows, volatility
 │   ├── Sync.lua        # peer-to-peer history backfill over addon channels
 │   └── Import.lua      # decode + merge a seed string from the website
 ├── UI/
@@ -214,23 +193,23 @@ TokenTrend/
 ## Requirements
 
 - World of Warcraft Retail (Midnight, interface `120007`).
-- **LibGraph-2.0** is bundled — no separate install needed.
+- LibGraph-2.0 is bundled, so there's nothing extra to install.
 
 ---
 
 ## Credits
 
-TokenTrend stands on the shoulders of others, borrowed with respect:
+TokenTrend leans on the work of others, borrowed with respect:
 
-- **Cryect / Xinhuan** — [LibGraph-2.0](https://www.wowace.com/projects/libgraph-2-0), the line-charting engine.
-- **NASDAQ** — inspiration for the Historical Data table, Day Range bar, and valuation gauges.
-- **Blizzard** — the `C_WowTokenPublic` API and the FrameXML patterns this is built on.
+- **Cryect and Xinhuan** for [LibGraph-2.0](https://www.wowace.com/projects/libgraph-2-0), the line-charting engine.
+- **NASDAQ** for the look of the history table, day range bar, and valuation gauges.
+- **Blizzard** for the token API and the UI patterns this is built on.
 
 ---
 
 ## License
 
-LibGraph-2.0 © Cryect / Xinhuan, used under its original license. TokenTrend code is free to use and modify.
+LibGraph-2.0 is © Cryect and Xinhuan, used under its original license. TokenTrend's own code is free to use and modify.
 
 <div align="center">
 
