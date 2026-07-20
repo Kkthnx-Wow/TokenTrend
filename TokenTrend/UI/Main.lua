@@ -13,6 +13,7 @@ local UI = {}
 ns.UI = UI
 
 local Skin = ns.Skin
+local statusTicker
 
 UI.tabDefs = {} -- { { id, label, build(panel) -> refreshFn } }
 UI.themed = {} -- recolor closures, replayed on theme change
@@ -283,6 +284,10 @@ function UI:Build()
 	end)
 	frame:SetScript("OnHide", function()
 		ns.db.window.shown = false
+		if statusTicker then
+			statusTicker:Cancel()
+			statusTicker = nil
+		end
 	end)
 	tinsert(UISpecialFrames, "TokenTrendFrame") -- ESC closes it
 	self:Skin(frame, "window")
@@ -410,12 +415,19 @@ function UI:Build()
 	syncBtn:SetPoint("RIGHT", refreshBtn, "LEFT", -8, 0)
 	self:SetTooltip(syncBtn, L["Sync"], L["Open the peer sync panel - see what history you've shared and gained."])
 
+	-- Import: paste a seed string from the website to fill the chart on day one.
+	local importBtn = self:Button(footer, L["Import"], 72, function()
+		ns:OpenImport()
+	end)
+	importBtn:SetPoint("RIGHT", syncBtn, "LEFT", -8, 0)
+	self:SetTooltip(importBtn, L["Import History"], L["Seed the chart with history from kkthnx.com/wow/token."])
+
 	-- Compact 12/24h clock toggle. Label shows the current mode; clicking flips
 	-- it. SettingChanged -> Refresh keeps the label in sync with /tt clock too.
 	local clockBtn = self:Button(footer, ns.db.clock24 and L["24h"] or L["12h"], 46, function()
 		ns:SetSetting("clock24", not ns.db.clock24)
 	end)
-	clockBtn:SetPoint("RIGHT", syncBtn, "LEFT", -8, 0)
+	clockBtn:SetPoint("RIGHT", importBtn, "LEFT", -8, 0)
 	self.clockBtn = clockBtn
 
 	self:ApplyTheme()
@@ -445,6 +457,33 @@ function UI:SelectTab(index)
 	if def and def.refresh then
 		def.refresh()
 	end
+end
+
+-- Footer status only (cheap; keeps "Last update" aging without redrawing the chart).
+function UI:RefreshStatus()
+	if not self.frame or not self.frame:IsShown() or not self.statusText then
+		return
+	end
+	local stats = ns.Analysis:Stats()
+	self.statusText:SetText(
+		("%s: %s   %s   %s: %d / %d"):format(
+			L["Last update"],
+			F.AgoString(ns.Data.lastUpdate),
+			F.Sep,
+			L["Samples"],
+			stats.samples,
+			ns.db.maxSamples
+		)
+	)
+end
+
+local function armStatusTicker()
+	if statusTicker then
+		return
+	end
+	statusTicker = C_Timer.NewTicker(60, function()
+		UI:RefreshStatus()
+	end)
 end
 
 -- ---------------------------------------------------------------------------
@@ -489,17 +528,8 @@ function UI:Refresh()
 	end
 
 	self.dayRange:Update(stats.dayLow, stats.dayHigh, stats.current)
-
-	self.statusText:SetText(
-		("%s: %s   %s   %s: %d / %d"):format(
-			L["Last update"],
-			F.AgoString(ns.Data.lastUpdate),
-			F.Sep,
-			L["Samples"],
-			stats.samples,
-			ns.db.maxSamples
-		)
-	)
+	self:RefreshStatus()
+	armStatusTicker()
 
 	if self.clockBtn then
 		self.clockBtn.label:SetText(ns.db.clock24 and L["24h"] or L["12h"])

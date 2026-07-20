@@ -19,14 +19,14 @@ local Ambiguate = Ambiguate
 local MAX_ROWS = 6 -- per list; the rest folds into "...and N more"
 
 -- Render a sender -> count map into a capped, biggest-first block of lines.
--- Names take the panel's text color; counts are forced white for contrast.
 local function listText(map)
 	local rows = {}
 	for name, n in pairs(map) do
 		rows[#rows + 1] = { name = name, n = n }
 	end
 	if #rows == 0 then
-		return "|cff808080" .. L["Nobody yet"] .. "|r"
+		local muted = F.Hex(ns:Palette().muted)
+		return "|cff" .. muted .. L["Nobody yet"] .. "|r"
 	end
 	tsort(rows, function(a, b) return a.n > b.n end)
 
@@ -38,7 +38,8 @@ local function listText(map)
 		lines[#lines + 1] = format("%s  |cffffffff%s|r", who, F.Comma(r.n))
 	end
 	if #rows > shown then
-		lines[#lines + 1] = format("|cff808080" .. L["...and %d more"] .. "|r", #rows - shown)
+		local muted = F.Hex(ns:Palette().muted)
+		lines[#lines + 1] = format("|cff" .. muted .. L["...and %d more"] .. "|r", #rows - shown)
 	end
 	return tconcat(lines, "\n")
 end

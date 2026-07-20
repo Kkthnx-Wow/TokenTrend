@@ -178,6 +178,7 @@ local function clickSort(colKey)
 		hist.sortCol = colKey
 		hist.sortAsc = (colKey ~= "date")
 	end
+	orderCache.rev = -1
 	hist.page = 1
 	refresh()
 end

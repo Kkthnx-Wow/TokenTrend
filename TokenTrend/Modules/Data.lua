@@ -17,6 +17,7 @@ local C_Timer = C_Timer
 local time = time
 local floor = math.floor
 local tsort = table.sort
+local pcall = pcall
 
 local function byTime(a, b) return a.t < b.t end
 
@@ -123,19 +124,19 @@ end
 -- API plumbing
 -- ---------------------------------------------------------------------------
 -- TOKEN_MARKET_PRICE_UPDATED fires after a successful UpdateMarketPrice().
--- We read the cached value, guard the (theoretically) secret money, store it.
+-- We read the cached copper value and store gold.
 function Data:OnPriceUpdated()
 	if not C_WowTokenPublic or not C_WowTokenPublic.GetCurrentMarketPrice then
 		return
 	end
 
-	local copper = C_WowTokenPublic.GetCurrentMarketPrice()
-	if not copper then return end
+	-- Wrapped in pcall so a bad patch-day API response can't error out the addon
+	-- mid-read. Worst case we skip this sample and catch the next clean update.
+	local ok, copper = pcall(C_WowTokenPublic.GetCurrentMarketPrice)
+	if not ok or not copper then return end
 
-	-- Money can be secret in combat. Don't do math on a sealed envelope -
-	-- we'll just catch the next (non-secret) update.
-	if F.IsSecret(copper) then return end
-
+	-- GetCurrentMarketPrice is absent from generated API docs — no Secret* tag to
+	-- invent. Treat as a plain copper amount (same as other token UI consumers).
 	local prev = self.current
 	local gold = F.CopperToGold(copper)
 	if gold <= 0 then return end
@@ -152,7 +153,9 @@ end
 -- Politely poke Blizzard for a fresh price (throttled internally by them).
 function Data:RequestUpdate()
 	if C_WowTokenPublic and C_WowTokenPublic.UpdateMarketPrice then
-		C_WowTokenPublic.UpdateMarketPrice()
+		-- pcall for the same reason as the read: never let a Blizzard-side hiccup
+		-- bubble up and break our ticker.
+		pcall(C_WowTokenPublic.UpdateMarketPrice)
 	end
 end
 

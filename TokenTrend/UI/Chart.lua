@@ -294,6 +294,11 @@ local function refresh()
 		-- Distinguish "no price ever" from "nothing in this time range".
 		chart.empty:SetText(#h == 0 and L["Waiting for first price..."] or L["No data in the selected range."])
 		chart.empty:Show()
+		-- Offer the import shortcut only when the whole history is empty, not when
+		-- the current range filter just happens to hide existing data.
+		if chart.emptyImport then
+			chart.emptyImport:SetShown(#h == 0)
+		end
 		chart.hint:Hide()
 		chart.graph:Hide()
 		chart.candlePool:ReleaseAll()
@@ -308,6 +313,9 @@ local function refresh()
 		return
 	end
 	chart.empty:Hide()
+	if chart.emptyImport then
+		chart.emptyImport:Hide()
+	end
 	-- While history is sparse, explain why the chart looks flat/short.
 	chart.hint:SetShown(nInRange < 3)
 
@@ -456,8 +464,17 @@ local function build(panel)
 
 	-- "No data" message.
 	chart.empty = UI:Text(plotArea, "OVERLAY", C.Font, 13, "", "muted")
-	chart.empty:SetPoint("CENTER")
+	chart.empty:SetPoint("CENTER", 0, 10)
 	chart.empty:SetText(L["Waiting for first price..."])
+
+	-- Import shortcut, shown under the empty message so a brand-new user with a
+	-- blank chart has an obvious next step instead of just waiting.
+	chart.emptyImport = UI:Button(plotArea, L["Import History"], 130, function()
+		ns:OpenImport()
+	end)
+	chart.emptyImport:SetPoint("TOP", chart.empty, "BOTTOM", 0, -10)
+	chart.emptyImport:Hide()
+	UI:SetTooltip(chart.emptyImport, L["Import History"], L["Seed the chart with history from kkthnx.com/wow/token."])
 
 	-- Sparse-history hint, tucked along the bottom of the plot.
 	chart.hint = UI:Text(plotArea, "OVERLAY", C.Font, 11, "", "muted")

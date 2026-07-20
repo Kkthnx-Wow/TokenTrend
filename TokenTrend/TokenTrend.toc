@@ -2,12 +2,24 @@
 ## Title: |cff00ccffToken|rTrend
 ## Notes: Financial-terminal price tracking for the WoW Token. Charts, moving averages, and buy/sell signals. |n|n|cff5C8BCFDeveloper|cffffffff:|r |nJosh "|CFF7b8489Kkthnx|r" Russell|n|n|cff009cdePayPal|r|cffffffff:|r |n|cffffffffwww.paypal.me/KkthnxTV|r|n|n|cfff96854Patreon|r|cffffffff:|r |n|cffffffffwww.patreon.com/Kkthnx|r
 ## Author: Josh
-## Version: 1.1.0
+## Version: 1.2.0
 ## SavedVariables: TokenTrendDB
 ## IconTexture: Interface\ICONS\wow_token01
 ## X-Category: Auction House & Vendors
 ## X-Support: Midnight
 ## X-Curse-Project-ID: 1577270
+
+## Category-enUS: Kkthnx's AddOns
+## Category-deDE: Kkthnx's AddOns
+## Category-esES: Kkthnx's AddOns
+## Category-esMX: Kkthnx's AddOns
+## Category-itIT: Kkthnx's AddOns
+## Category-frFR: Kkthnx's AddOns
+## Category-ptBR: Kkthnx's AddOns
+## Category-ruRU: Kkthnx's AddOns
+## Category-koKR: Kkthnx's AddOns
+## Category-zhCN: Kkthnx's AddOns
+## Category-zhTW: Kkthnx's AddOns
 
 # Libraries
 Libs\LibGraph-2.0\LibStub.lua
@@ -25,6 +37,7 @@ Modules\Data.lua
 Modules\Analysis.lua
 Modules\Alerts.lua
 Modules\Sync.lua
+Modules\Import.lua
 
 # UI
 UI\Skin.lua

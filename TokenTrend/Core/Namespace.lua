@@ -181,3 +181,11 @@ ns:RegisterEvent("PLAYER_LOGIN", function()
 		loginQueue[i]()
 	end
 end)
+
+-- Alt swaps / reloads without a full logout still need a fresh class tint.
+ns:RegisterEvent("PLAYER_ENTERING_WORLD", function()
+	ns:InvalidateClassPalette()
+	if ns.db and ns.db.palette == "class" and ns.UI and ns.UI.frame then
+		ns:Fire("SettingChanged", "palette", "class")
+	end
+end)

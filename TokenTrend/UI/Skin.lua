@@ -15,9 +15,42 @@ local CreateColor = CreateColor
 local max = math.max
 local floor = math.floor
 
+-- ---------------------------------------------------------------------------
+-- Pixel-perfect sizing. On any UI scale other than 1.0, a hard-coded edgeSize
+-- of "1" is not one physical pixel, so borders render uneven (one edge fat, the
+-- opposite thin). We compute the true size of one screen pixel in UI units and
+-- feed that to every backdrop edge, so borders stay crisp and even at any
+-- resolution or scale. Recomputed on UI_SCALE_CHANGED and DISPLAY_SIZE_CHANGED.
+-- (Technique borrowed from mature UI suites; the payoff is sharper edges.)
+-- ---------------------------------------------------------------------------
+local function computePixel()
+	local scale = UIParent and UIParent:GetEffectiveScale() or 1
+	local _, screenH = GetPhysicalScreenSize and GetPhysicalScreenSize() or nil, nil
+	if not screenH then
+		return 1
+	end
+	-- One physical pixel expressed in UI coordinate units.
+	return (768 / screenH) / scale
+end
+
+local PIXEL = computePixel()
+
 local ADDON_MEDIA = "Interface\\AddOns\\TokenTrend\\Media\\"
 Skin.bdTex = "Interface\\ChatFrame\\ChatFrameBackground"
 Skin.blizzBgTex = "Interface\\Tooltips\\UI-Tooltip-Background"
+
+-- Turn off Blizzard's pixel snapping on a texture. Snapping rounds a texture's
+-- edges to the grid independently, which at fractional UI scales makes a fill
+-- drift a fraction against its border. Disabling it keeps fills aligned. Guarded
+-- because the method only exists on textures/lines (since Legion).
+local function noSnap(tex)
+	if tex and tex.SetSnapToPixelGrid and tex.SetTexelSnappingBias then
+		tex:SetSnapToPixelGrid(false)
+		tex:SetTexelSnappingBias(0)
+	end
+	return tex
+end
+Skin.NoSnap = noSnap
 
 -- Prefer bundled media when present; probe once at load.
 local function probeTexture(path)
@@ -38,8 +71,6 @@ end
 
 Skin.glowTex = pickMedia("glowTex.blp", Skin.bdTex)
 Skin.bgTex = pickMedia("bgTex.blp", Skin.blizzBgTex)
-
-local PIXEL = 1
 
 local defaultBD = { bgFile = Skin.bdTex, edgeFile = Skin.bdTex, edgeSize = PIXEL }
 
@@ -115,6 +146,7 @@ function Skin.CreateBgTex(frame, alpha)
 	local tex = frame:CreateTexture(nil, "BACKGROUND", nil, 0)
 	tex:SetAllPoints()
 	tex:SetTexture(Skin.bgTex, true, true)
+	noSnap(tex)
 	tex:SetHorizTile(true)
 	tex:SetVertTile(true)
 	if Skin.bgTex == Skin.blizzBgTex then
@@ -137,6 +169,7 @@ function Skin.ApplyPanelGradient(frame, role)
 	local tex = frame:CreateTexture(nil, "BORDER", nil, -1)
 	Skin.SetInside(tex, frame, 1)
 	tex:SetTexture(Skin.bdTex)
+	noSnap(tex)
 
 	local p = ns:Palette()
 	local base = (role == "panel") and p.panel or p.bg
@@ -153,14 +186,27 @@ local function applyButtonGradient(tex, p, accent)
 	end
 	if accent then
 		tex:SetGradient("VERTICAL",
-			CreateColor(p.accent[1] * 0.4, p.accent[2] * 0.4, p.accent[3] * 0.4, 0.7),
-			CreateColor(p.accent[1] * 0.15, p.accent[2] * 0.15, p.accent[3] * 0.15, 0.2))
+			CreateColor(p.accent[1] * 0.55, p.accent[2] * 0.55, p.accent[3] * 0.55, 0.92),
+			CreateColor(p.accent[1] * 0.28, p.accent[2] * 0.28, p.accent[3] * 0.28, 0.55))
 	else
-		local r, g, b = p.panel[1], p.panel[2], p.panel[3]
+		-- Resting buttons sit ON the panel, so they can't share the panel color or
+		-- they vanish into it. Raise the fill toward the text color for a distinctly
+		-- lighter "key cap" that reads as clickable. Solid and opaque, not a faint
+		-- wash, so the contrast holds on every palette.
+		local pn, tx = p.panel, p.text
+		local function raise(i, amt) return pn[i] + (tx[i] - pn[i]) * amt end
 		tex:SetGradient("VERTICAL",
-			CreateColor(r * 0.72, g * 0.72, b * 0.72, 0.98),
-			CreateColor(r * 1.18, g * 1.18, b * 1.18, 0.42))
+			CreateColor(raise(1, 0.20), raise(2, 0.20), raise(3, 0.20), 1),
+			CreateColor(raise(1, 0.10), raise(2, 0.10), raise(3, 0.10), 1))
 	end
+end
+
+-- A resting button's outline. Pure black vanishes against a dark panel, so lift
+-- it slightly toward the border color for a visible-but-subtle edge.
+function Skin.ApplyButtonBorder(bg, p)
+	p = p or ns:Palette()
+	local b = p.border
+	bg:SetBackdropBorderColor(b[1] * 0.9, b[2] * 0.9, b[3] * 0.9, 0.9)
 end
 
 function Skin.RefreshBackdrop(bg)
@@ -170,7 +216,7 @@ function Skin.RefreshBackdrop(bg)
 	local p = ns:Palette()
 	if bg.__ttIsButton then
 		bg:SetBackdropColor(0, 0, 0, 0)
-		Skin.ApplyPixelBorder(bg, 1)
+		Skin.ApplyButtonBorder(bg, p)
 		applyButtonGradient(bg.__ttGradient, p, false)
 		return
 	end
@@ -221,6 +267,7 @@ function Skin.AttachButtonBg(button, opts)
 	local wash = bg:CreateTexture(nil, "BORDER")
 	Skin.SetInside(wash, bg, 1)
 	wash:SetTexture(Skin.bdTex)
+	noSnap(wash)
 
 	bg.__ttIsButton = true
 	bg.__ttGradient = wash
@@ -230,7 +277,7 @@ function Skin.AttachButtonBg(button, opts)
 	local function rest()
 		local p = ns:Palette()
 		bg:SetBackdropColor(0, 0, 0, 0)
-		Skin.ApplyPixelBorder(bg, 1)
+		Skin.ApplyButtonBorder(bg, p)
 		applyButtonGradient(wash, p, false)
 	end
 
@@ -274,4 +321,18 @@ end
 -- Expose pixel backdrop table for banners/tooltips.
 function Skin.BackdropTable()
 	return { bgFile = Skin.bdTex, edgeFile = Skin.bdTex, edgeSize = PIXEL }
+end
+
+-- Recompute the true pixel size when the UI scale or display changes, and push
+-- the new edge size onto the shared backdrop table so future skins use it. Live
+-- frames re-read their border on the next RefreshBackdrop (theme swap / redraw),
+-- which is enough for a setting people change rarely.
+local function refreshPixel()
+	PIXEL = computePixel()
+	defaultBD.edgeSize = PIXEL
+end
+
+if ns.RegisterEvent then
+	ns:RegisterEvent("UI_SCALE_CHANGED", refreshPixel)
+	ns:RegisterEvent("DISPLAY_SIZE_CHANGED", refreshPixel)
 end

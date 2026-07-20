@@ -15,7 +15,7 @@
 
 **TokenTrend** turns the WoW Token's market price into a proper trading terminal. It quietly samples the price while you play, banks the history in SavedVariables, and renders it as line charts, candlesticks, moving averages, and volatility heatmaps — so "is now a good time to buy?" becomes a glance, not a guess.
 
-Because addons only run while you're logged in, TokenTrend can't see the past. It builds your price history one sample at a time; the longer you play, the richer your charts get.
+Because addons only run while you're logged in, TokenTrend can't see the past on its own. It builds your price history one sample at a time. But you don't have to start from an empty chart. You can **seed it with real history** from the website in about ten seconds (see [Start With a Full Chart](#start-with-a-full-chart) below), and peer sync fills gaps from your guild. The longer you play, the richer your charts get.
 
 - **Terminal-grade, not toy** — candlesticks, moving averages, OHLC tables, and a buy signal, all from live data.
 - **Region-aware** — the token economy is region-wide, so history is keyed by region and shared across your characters (and, optionally, your guild).
@@ -36,6 +36,21 @@ There's nothing to configure to get started — TokenTrend begins recording the 
 
 ---
 
+## Start With a Full Chart
+
+A fresh install has no history yet, so the chart opens empty. You don't have to wait weeks to collect it. Seed the chart with real, recently-recorded prices from the companion site in about ten seconds.
+
+1. In-game, open TokenTrend with `/tt` and click **Import** in the footer (or run `/tt import`).
+2. Don't have a seed string yet? Click **Get URL** in that window, or run `/tt url`, to get the web address. Copy it and open it in your browser.
+3. On **[kkthnx.com/wow/token](https://kkthnx.com/wow/token)**, hit **Copy** next to your region (US, EU, KR, or TW).
+4. Back in-game, paste the string into the Import box and confirm.
+
+Your chart fills in immediately. The prices are real history sourced from Blizzard's official Game Data API, not filler. Import is **insert-only**, so it never overwrites readings you've recorded yourself, and it's safe to run more than once. From here, TokenTrend records the live price on its own and peer sync backfills the rest.
+
+> **Why a copy/paste and not an auto-download?** Addons can't reach the internet directly. The website can see recorded history the addon can't, so handing it over as a short string you paste in is the cleanest bridge between the two.
+
+---
+
 ## Getting Started
 
 | Command | Description |
@@ -45,6 +60,8 @@ There's nothing to configure to get started — TokenTrend begins recording the 
 | `/tt hide` | Close the window |
 | `/tt theme` | Cycle the color theme |
 | `/tt refresh` | Request a fresh price from the server |
+| `/tt import` | Open the Import window to paste history from the website |
+| `/tt url` | Show the seed page address to copy into your browser |
 | `/tt sync` | Toggle peer history sharing (on by default) |
 | `/tt clock` | Toggle 12- / 24-hour time (24-hour by default) |
 
@@ -85,6 +102,7 @@ You can also **left-click** the minimap button to toggle the window, and **drag*
 
 ### Quality of Life
 
+- **Seed from the website** — start with a full chart instead of an empty one by pasting real history from **[kkthnx.com/wow/token](https://kkthnx.com/wow/token)**. See **[Start With a Full Chart](#start-with-a-full-chart)** above.
 - **Peer history sync** — backfill your offline gaps by trading price samples with guildmates and groupmates. See **[Peer Sync](#peer-sync)** below for the full picture.
 - **Minimap button** — left-click to toggle, drag to reposition.
 - **Slash commands** — full `/tt` command set (see above).
@@ -154,6 +172,7 @@ All toggles apply **live** — TokenTrend re-themes and re-renders without a `/r
 3. **Analyze** — moving averages (sliding window, O(n)), candle aggregation, trailing lows/highs, and hour/weekday volatility buckets are computed on demand and **memoized** against a data-revision counter, so nothing recomputes until a new price actually lands.
 4. **Render** — the line view uses LibGraph; candlesticks are hand-drawn axis-aligned texture rectangles from a reusable pool.
 5. **Sync** *(optional)* — over WoW's addon channels (guild + party/raid; there is no global channel), peers exchange a compact per-day coverage **manifest**, request only the days they're missing, and stream back the buckets — delivered through a throttled, disconnect-safe send queue and merged insert-only.
+6. **Import** *(optional)* — a seed string copied from [kkthnx.com/wow/token](https://kkthnx.com/wow/token) is decoded and merged the same insert-only way, so a brand-new install can open with a full chart instead of an empty one.
 
 ### Midnight (12.0) note
 
@@ -175,7 +194,8 @@ TokenTrend/
 ├── Modules/
 │   ├── Data.lua        # token polling + history recording + peer merge
 │   ├── Analysis.lua    # MAs, candles, lows/highs, volatility (memoized)
-│   └── Sync.lua        # peer-to-peer history backfill over addon channels
+│   ├── Sync.lua        # peer-to-peer history backfill over addon channels
+│   └── Import.lua      # decode + merge a seed string from the website
 ├── UI/
 │   ├── Main.lua        # window chrome, theming, header, tabs, footer
 │   ├── SyncPanel.lua   # footer Sync popover (status, gained, peers)
